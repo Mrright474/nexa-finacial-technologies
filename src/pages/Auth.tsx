@@ -1,12 +1,12 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useSearchParams, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Eye, EyeOff, ArrowLeft, Mail, Phone, Lock, User, BookOpen, Moon, Globe } from 'lucide-react';
+import { Eye, EyeOff, ArrowLeft, Mail, Lock, User, BookOpen, Moon, Globe } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useApp } from '@/context/AppContext';
-import { PackageType } from '@/types';
+import { useAuth } from '@/hooks/useAuth';
+import { PackageType } from '@/hooks/useProfile';
 
 const packages = [
   { id: 'steward', name: 'Steward', icon: BookOpen, gradient: 'from-steward to-orange-500', description: 'Faith-driven finance' },
@@ -17,7 +17,7 @@ const packages = [
 export default function Auth() {
   const [searchParams] = useSearchParams();
   const navigate = useNavigate();
-  const { setPackageType } = useApp();
+  const { user, signIn, signUp, loading } = useAuth();
   
   const initialMode = searchParams.get('mode') === 'signup' ? 'signup' : 'signin';
   const initialPackage = searchParams.get('package') as PackageType | null;
@@ -26,21 +26,53 @@ export default function Auth() {
   const [showPassword, setShowPassword] = useState(false);
   const [step, setStep] = useState(initialPackage ? 2 : 1);
   const [selectedPackage, setSelectedPackage] = useState<PackageType | null>(initialPackage);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  // Form state
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
+  const [firstName, setFirstName] = useState('');
+  const [lastName, setLastName] = useState('');
+
+  // Redirect if already logged in
+  useEffect(() => {
+    if (user && !loading) {
+      navigate('/dashboard');
+    }
+  }, [user, loading, navigate]);
 
   const handlePackageSelect = (pkg: PackageType) => {
     setSelectedPackage(pkg);
-    setPackageType(pkg);
     setStep(2);
   };
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
-    // Demo: navigate to dashboard
-    if (selectedPackage) {
-      setPackageType(selectedPackage);
+    setIsSubmitting(true);
+
+    if (mode === 'signup') {
+      const { error } = await signUp(email, password, firstName, lastName);
+      if (!error) {
+        // Auto sign in after signup since auto-confirm is enabled
+        await signIn(email, password);
+      }
+    } else {
+      const { error } = await signIn(email, password);
+      if (!error) {
+        navigate('/dashboard');
+      }
     }
-    navigate('/dashboard');
+
+    setIsSubmitting(false);
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background flex">
@@ -139,12 +171,26 @@ export default function Auth() {
                       <Label htmlFor="firstName">First Name</Label>
                       <div className="relative mt-1">
                         <User className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                        <Input id="firstName" placeholder="Alex" className="pl-10" />
+                        <Input 
+                          id="firstName" 
+                          placeholder="Alex" 
+                          className="pl-10"
+                          value={firstName}
+                          onChange={(e) => setFirstName(e.target.value)}
+                          required
+                        />
                       </div>
                     </div>
                     <div>
                       <Label htmlFor="lastName">Last Name</Label>
-                      <Input id="lastName" placeholder="Nakamura" className="mt-1" />
+                      <Input 
+                        id="lastName" 
+                        placeholder="Nakamura" 
+                        className="mt-1"
+                        value={lastName}
+                        onChange={(e) => setLastName(e.target.value)}
+                        required
+                      />
                     </div>
                   </div>
                 )}
@@ -153,19 +199,17 @@ export default function Auth() {
                   <Label htmlFor="email">Email</Label>
                   <div className="relative mt-1">
                     <Mail className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                    <Input id="email" type="email" placeholder="you@example.com" className="pl-10" />
+                    <Input 
+                      id="email" 
+                      type="email" 
+                      placeholder="you@example.com" 
+                      className="pl-10"
+                      value={email}
+                      onChange={(e) => setEmail(e.target.value)}
+                      required
+                    />
                   </div>
                 </div>
-
-                {mode === 'signup' && (
-                  <div>
-                    <Label htmlFor="phone">Phone Number</Label>
-                    <div className="relative mt-1">
-                      <Phone className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
-                      <Input id="phone" type="tel" placeholder="+256 700 123 456" className="pl-10" />
-                    </div>
-                  </div>
-                )}
 
                 <div>
                   <Label htmlFor="password">Password</Label>
@@ -176,6 +220,10 @@ export default function Auth() {
                       type={showPassword ? 'text' : 'password'}
                       placeholder="••••••••"
                       className="pl-10 pr-10"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      required
+                      minLength={6}
                     />
                     <button
                       type="button"
@@ -198,8 +246,14 @@ export default function Auth() {
                 )}
               </div>
 
-              <Button type="submit" variant="gradient" className="w-full mt-6" size="lg">
-                {mode === 'signin' ? 'Sign In' : 'Create Account'}
+              <Button 
+                type="submit" 
+                variant="gradient" 
+                className="w-full mt-6" 
+                size="lg"
+                disabled={isSubmitting}
+              >
+                {isSubmitting ? 'Please wait...' : mode === 'signin' ? 'Sign In' : 'Create Account'}
               </Button>
 
               <p className="text-center text-sm text-muted-foreground mt-6">

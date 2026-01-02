@@ -1,17 +1,22 @@
 import { useState } from 'react';
-import { Link, useLocation } from 'react-router-dom';
+import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Wallet, CreditCard, ArrowLeftRight, TrendingUp, Settings, LogOut, User } from 'lucide-react';
+import { Menu, X, Wallet, CreditCard, ArrowLeftRight, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe } from 'lucide-react';
+import { useAuth } from '@/hooks/useAuth';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
+import { PackageType } from '@/hooks/useProfile';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
+  const [showPackageMenu, setShowPackageMenu] = useState(false);
   const location = useLocation();
-  const { user, packageType } = useApp();
+  const navigate = useNavigate();
+  const { user, signOut, isAdmin } = useAuth();
+  const { packageType, setPackageType, userName } = useApp();
 
   const isLanding = location.pathname === '/';
-  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin');
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers');
 
   const navLinks = [
     { href: '#features', label: 'Features' },
@@ -28,13 +33,29 @@ export function Navbar() {
     { href: '/transfers', label: 'Transfers', icon: ArrowLeftRight },
   ];
 
+  const packageOptions: { id: PackageType; name: string; icon: typeof BookOpen; gradient: string }[] = [
+    { id: 'steward', name: 'Steward', icon: BookOpen, gradient: 'from-steward to-orange-500' },
+    { id: 'amanah', name: 'Amanah', icon: Moon, gradient: 'from-amanah to-emerald-400' },
+    { id: 'cultura', name: 'Cultura', icon: Globe, gradient: 'from-cultura to-purple-500' },
+  ];
+
   const packageColors = {
     steward: 'from-steward to-orange-500',
     amanah: 'from-amanah to-emerald-400',
     cultura: 'from-cultura to-purple-500',
   };
 
-  if (isDashboard) {
+  const handleSignOut = async () => {
+    await signOut();
+    navigate('/');
+  };
+
+  const handlePackageChange = async (pkg: PackageType) => {
+    await setPackageType(pkg);
+    setShowPackageMenu(false);
+  };
+
+  if (isDashboard && user) {
     return (
       <nav className="fixed top-0 left-0 right-0 z-50 glass border-b border-border/50">
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
@@ -62,17 +83,58 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-3">
-              <Link to="/admin">
-                <Button variant="ghost" size="sm">Admin</Button>
-              </Link>
-              <Link to="/settings">
-                <Button variant="ghost" size="icon">
-                  <Settings className="w-5 h-5" />
-                </Button>
-              </Link>
+              {/* Package Switcher (for admins or as general feature) */}
+              <div className="relative">
+                <button
+                  onClick={() => setShowPackageMenu(!showPackageMenu)}
+                  className={cn(
+                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                    "bg-gradient-to-r text-white",
+                    packageColors[packageType]
+                  )}
+                >
+                  {packageType.charAt(0).toUpperCase() + packageType.slice(1)}
+                </button>
+                
+                {showPackageMenu && (
+                  <div className="absolute right-0 mt-2 w-48 glass-card p-2 animate-fade-in">
+                    {packageOptions.map((pkg) => {
+                      const Icon = pkg.icon;
+                      return (
+                        <button
+                          key={pkg.id}
+                          onClick={() => handlePackageChange(pkg.id)}
+                          className={cn(
+                            "w-full flex items-center gap-3 p-2 rounded-lg transition-colors text-left",
+                            packageType === pkg.id ? 'bg-secondary' : 'hover:bg-secondary/50'
+                          )}
+                        >
+                          <div className={cn('w-8 h-8 rounded-lg bg-gradient-to-br flex items-center justify-center', pkg.gradient)}>
+                            <Icon className="w-4 h-4 text-white" />
+                          </div>
+                          <span className="text-sm font-medium text-foreground">{pkg.name}</span>
+                        </button>
+                      );
+                    })}
+                  </div>
+                )}
+              </div>
+
+              {isAdmin && (
+                <Link to="/admin">
+                  <Button variant="ghost" size="sm" className="gap-2">
+                    <Shield className="w-4 h-4" /> Admin
+                  </Button>
+                </Link>
+              )}
+              
+              <Button variant="ghost" size="icon" onClick={handleSignOut}>
+                <LogOut className="w-5 h-5" />
+              </Button>
+              
               <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
                 <span className="text-white text-sm font-semibold">
-                  {user?.firstName[0]}{user?.lastName[0]}
+                  {userName?.[0]?.toUpperCase() || 'U'}
                 </span>
               </div>
             </div>
@@ -106,12 +168,23 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
-            <Link to="/auth">
-              <Button variant="ghost">Sign In</Button>
-            </Link>
-            <Link to="/auth?mode=signup">
-              <Button variant="gradient">Get Started</Button>
-            </Link>
+            {user ? (
+              <>
+                <Link to="/dashboard">
+                  <Button variant="ghost">Dashboard</Button>
+                </Link>
+                <Button variant="ghost" onClick={handleSignOut}>Sign Out</Button>
+              </>
+            ) : (
+              <>
+                <Link to="/auth">
+                  <Button variant="ghost">Sign In</Button>
+                </Link>
+                <Link to="/auth?mode=signup">
+                  <Button variant="gradient">Get Started</Button>
+                </Link>
+              </>
+            )}
           </div>
 
           <button
@@ -135,12 +208,23 @@ export function Navbar() {
               </a>
             ))}
             <div className="pt-4 space-y-2">
-              <Link to="/auth" className="block">
-                <Button variant="ghost" className="w-full">Sign In</Button>
-              </Link>
-              <Link to="/auth?mode=signup" className="block">
-                <Button variant="gradient" className="w-full">Get Started</Button>
-              </Link>
+              {user ? (
+                <>
+                  <Link to="/dashboard" className="block">
+                    <Button variant="ghost" className="w-full">Dashboard</Button>
+                  </Link>
+                  <Button variant="ghost" className="w-full" onClick={handleSignOut}>Sign Out</Button>
+                </>
+              ) : (
+                <>
+                  <Link to="/auth" className="block">
+                    <Button variant="ghost" className="w-full">Sign In</Button>
+                  </Link>
+                  <Link to="/auth?mode=signup" className="block">
+                    <Button variant="gradient" className="w-full">Get Started</Button>
+                  </Link>
+                </>
+              )}
             </div>
           </div>
         )}

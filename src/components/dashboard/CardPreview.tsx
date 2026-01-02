@@ -1,12 +1,17 @@
 import { useApp } from '@/context/AppContext';
+import { useAuth } from '@/hooks/useAuth';
+import { useProfile } from '@/hooks/useProfile';
 import { NexaCard } from '@/components/cards/NexaCard';
 import { Button } from '@/components/ui/button';
 import { Plus } from 'lucide-react';
 import { Link } from 'react-router-dom';
 
 export function CardPreview() {
-  const { cards, packageType, user } = useApp();
+  const { cards, packageType } = useApp();
+  const { profile } = useProfile();
   const primaryCard = cards[0];
+
+  const holderName = profile ? `${profile.first_name || ''} ${profile.last_name || ''}`.trim().toUpperCase() || 'CARD HOLDER' : 'CARD HOLDER';
 
   return (
     <div className="glass-card p-6 animate-slide-up delay-100">
@@ -21,10 +26,10 @@ export function CardPreview() {
         <div className="transform hover:scale-[1.02] transition-transform duration-300">
           <NexaCard
             packageType={packageType}
-            type={primaryCard.type}
+            type={primaryCard.type as 'virtual' | 'physical'}
             lastFour={primaryCard.lastFour}
             balance={primaryCard.balance}
-            holderName={`${user?.firstName} ${user?.lastName}`.toUpperCase()}
+            holderName={holderName}
           />
         </div>
       ) : (
