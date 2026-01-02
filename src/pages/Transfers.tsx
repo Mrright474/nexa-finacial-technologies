@@ -1,13 +1,17 @@
+import { useEffect, useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
+import { useAuth } from '@/hooks/useAuth';
+import { useWallet, Wallet, Transaction } from '@/hooks/useWallet';
 import { 
   ArrowRight, User, Smartphone, Building2, 
   Globe, QrCode, History, Star, Search
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import { useState } from 'react';
+import { formatDistanceToNow } from 'date-fns';
 
 const transferMethods = [
   { id: 'p2p', label: 'NEXA User', icon: User, description: 'Send to any NEXA user' },
@@ -16,16 +20,68 @@ const transferMethods = [
   { id: 'international', label: 'International', icon: Globe, description: 'Cross-border transfers' },
 ];
 
-const recentRecipients = [
-  { name: 'Sarah Mwangi', type: 'NEXA', identifier: '@sarah.m', favorite: true },
-  { name: 'John Kamara', type: 'MTN', identifier: '+256 700 123 456', favorite: true },
-  { name: 'Maria Santos', type: 'NEXA', identifier: '@maria.s', favorite: false },
-  { name: 'Ahmed Hassan', type: 'Bank', identifier: '****4521', favorite: false },
-];
-
 export default function Transfers() {
+  const { user, loading: authLoading } = useAuth();
+  const { fetchWallets, fetchTransactions, transfer, loading: walletLoading } = useWallet();
+  const navigate = useNavigate();
+  
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [selectedMethod, setSelectedMethod] = useState('p2p');
   const [amount, setAmount] = useState('');
+  const [recipient, setRecipient] = useState('');
+  const [note, setNote] = useState('');
+  const [selectedCurrency, setSelectedCurrency] = useState('USD');
+  const [loadingData, setLoadingData] = useState(true);
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate('/auth');
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      loadData();
+    }
+  }, [user]);
+
+  const loadData = async () => {
+    setLoadingData(true);
+    const [walletsData, txData] = await Promise.all([
+      fetchWallets(),
+      fetchTransactions()
+    ]);
+    setWallets(walletsData);
+    setTransactions(txData);
+    if (walletsData.length > 0) {
+      setSelectedCurrency(walletsData[0].currency);
+    }
+    setLoadingData(false);
+  };
+
+  const handleTransfer = async () => {
+    const amountNum = parseFloat(amount);
+    if (isNaN(amountNum) || amountNum <= 0 || !recipient) return;
+
+    const success = await transfer(recipient, selectedCurrency, amountNum, note);
+    if (success) {
+      setAmount('');
+      setRecipient('');
+      setNote('');
+      loadData();
+    }
+  };
+
+  const selectedWallet = wallets.find(w => w.currency === selectedCurrency);
+
+  if (authLoading || !user) {
+    return (
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="animate-pulse text-muted-foreground">Loading...</div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -78,9 +134,26 @@ export default function Transfers() {
               
               <div className="space-y-4">
                 <div>
+                  <Label>Currency</Label>
+                  <select 
+                    className="w-full mt-1 p-3 rounded-xl bg-secondary border border-border text-foreground"
+                    value={selectedCurrency}
+                    onChange={(e) => setSelectedCurrency(e.target.value)}
+                  >
+                    {wallets.map(w => (
+                      <option key={w.currency} value={w.currency}>
+                        {w.currency} - Balance: {Number(w.balance).toLocaleString()}
+                      </option>
+                    ))}
+                  </select>
+                </div>
+
+                <div>
                   <Label>Amount</Label>
                   <div className="relative mt-1">
-                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-muted-foreground">$</span>
+                    <span className="absolute left-4 top-1/2 -translate-y-1/2 text-2xl font-bold text-muted-foreground">
+                      {selectedCurrency === 'USD' ? '$' : selectedCurrency === 'EUR' ? '€' : ''}
+                    </span>
                     <Input
                       type="number"
                       value={amount}
@@ -89,38 +162,50 @@ export default function Transfers() {
                       className="pl-12 text-3xl font-bold h-16"
                     />
                   </div>
-                  <p className="text-sm text-muted-foreground mt-2">Available: $3,420.50</p>
+                  <p className="text-sm text-muted-foreground mt-2">
+                    Available: {selectedWallet ? Number(selectedWallet.balance).toLocaleString() : '0'} {selectedCurrency}
+                  </p>
                 </div>
 
                 <div>
-                  <Label>Recipient</Label>
+                  <Label>Recipient Email</Label>
                   <div className="relative mt-1">
                     <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-muted-foreground" />
                     <Input
-                      placeholder={selectedMethod === 'p2p' ? 'Enter username or email' : 'Enter phone or account number'}
+                      placeholder="Enter recipient's email"
                       className="pl-10"
+                      value={recipient}
+                      onChange={(e) => setRecipient(e.target.value)}
                     />
                   </div>
                 </div>
 
                 <div>
                   <Label>Note (Optional)</Label>
-                  <Input placeholder="What's this for?" className="mt-1" />
+                  <Input 
+                    placeholder="What's this for?" 
+                    className="mt-1"
+                    value={note}
+                    onChange={(e) => setNote(e.target.value)}
+                  />
                 </div>
 
-                <div className="pt-4 flex gap-3">
-                  <Button variant="gradient" size="lg" className="flex-1 gap-2">
-                    Send Money <ArrowRight className="w-5 h-5" />
-                  </Button>
-                  <Button variant="outline" size="lg">
-                    <QrCode className="w-5 h-5" />
+                <div className="pt-4">
+                  <Button 
+                    variant="gradient" 
+                    size="lg" 
+                    className="w-full gap-2"
+                    onClick={handleTransfer}
+                    disabled={walletLoading || !amount || !recipient}
+                  >
+                    {walletLoading ? 'Processing...' : 'Send Money'} <ArrowRight className="w-5 h-5" />
                   </Button>
                 </div>
               </div>
             </div>
           </div>
 
-          {/* Recent Recipients */}
+          {/* Recent Transactions */}
           <div className="space-y-6 animate-slide-up delay-200">
             <div className="glass-card p-6">
               <div className="flex items-center justify-between mb-4">
@@ -131,25 +216,48 @@ export default function Transfers() {
               </div>
 
               <div className="space-y-3">
-                {recentRecipients.map((recipient, index) => (
-                  <button
-                    key={index}
-                    className="w-full flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors text-left"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white font-semibold">
-                        {recipient.name.split(' ').map(n => n[0]).join('')}
+                {loadingData ? (
+                  <p className="text-muted-foreground text-center py-4">Loading...</p>
+                ) : transactions.length === 0 ? (
+                  <p className="text-muted-foreground text-center py-4">No transactions yet</p>
+                ) : (
+                  transactions.slice(0, 5).map((tx) => (
+                    <div
+                      key={tx.id}
+                      className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={cn(
+                          "w-10 h-10 rounded-full flex items-center justify-center",
+                          tx.transaction_type === 'receive' || tx.transaction_type === 'deposit' 
+                            ? 'bg-success/20' 
+                            : 'bg-primary/20'
+                        )}>
+                          <span className="text-lg">
+                            {tx.transaction_type === 'receive' || tx.transaction_type === 'deposit' ? '↓' : '↑'}
+                          </span>
+                        </div>
+                        <div>
+                          <p className="font-medium text-foreground text-sm">
+                            {tx.recipient_name || tx.description || tx.transaction_type}
+                          </p>
+                          <p className="text-xs text-muted-foreground">
+                            {formatDistanceToNow(new Date(tx.created_at), { addSuffix: true })}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="font-medium text-foreground">{recipient.name}</p>
-                        <p className="text-xs text-muted-foreground">{recipient.type} • {recipient.identifier}</p>
-                      </div>
+                      <p className={cn(
+                        "font-semibold",
+                        tx.transaction_type === 'receive' || tx.transaction_type === 'deposit'
+                          ? 'text-success' 
+                          : 'text-foreground'
+                      )}>
+                        {tx.transaction_type === 'receive' || tx.transaction_type === 'deposit' ? '+' : '-'}
+                        {tx.currency === 'USD' ? '$' : ''}{Number(tx.amount).toLocaleString()}
+                      </p>
                     </div>
-                    {recipient.favorite && (
-                      <Star className="w-4 h-4 text-warning fill-warning" />
-                    )}
-                  </button>
-                ))}
+                  ))
+                )}
               </div>
             </div>
 
