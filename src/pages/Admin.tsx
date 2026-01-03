@@ -7,11 +7,13 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { 
   Users, CreditCard, TrendingUp, AlertTriangle, 
-  Search, Filter, Download, Settings, Shield,
-  ArrowUpRight, ArrowDownLeft, Activity, FileCheck, X, Check
+  Search, Download, Shield, Wallet, ArrowLeftRight,
+  Activity, FileCheck, X, Check, Eye, UserCog, Ban, CheckCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
 
 interface Profile {
   id: string;
@@ -34,11 +36,48 @@ interface KycDocument {
   created_at: string;
 }
 
+interface WalletData {
+  id: string;
+  user_id: string;
+  currency: string;
+  balance: number;
+  wallet_type: string;
+}
+
+interface TransactionData {
+  id: string;
+  user_id: string;
+  amount: number;
+  currency: string;
+  transaction_type: string;
+  status: string;
+  description: string | null;
+  recipient_name: string | null;
+  created_at: string;
+}
+
+interface CardData {
+  id: string;
+  user_id: string;
+  card_type: string;
+  last_four: string;
+  status: string;
+  balance: number;
+  spend_limit: number;
+  network: string;
+}
+
+interface UserRole {
+  id: string;
+  user_id: string;
+  role: string;
+}
+
 const stats = [
-  { label: 'Total Users', value: '0', change: '+0%', icon: Users, color: 'from-blue-500 to-cyan-500' },
-  { label: 'Active Cards', value: '0', change: '+0%', icon: CreditCard, color: 'from-purple-500 to-pink-500' },
-  { label: 'Transaction Volume', value: '$0', change: '+0%', icon: TrendingUp, color: 'from-green-500 to-emerald-500' },
-  { label: 'Pending KYC', value: '0', change: '0', icon: AlertTriangle, color: 'from-red-500 to-orange-500' },
+  { label: 'Total Users', value: '0', icon: Users, color: 'from-blue-500 to-cyan-500' },
+  { label: 'Active Cards', value: '0', icon: CreditCard, color: 'from-purple-500 to-pink-500' },
+  { label: 'Transaction Volume', value: '$0', icon: TrendingUp, color: 'from-green-500 to-emerald-500' },
+  { label: 'Pending KYC', value: '0', icon: AlertTriangle, color: 'from-red-500 to-orange-500' },
 ];
 
 const packageColors: Record<string, string> = {
@@ -51,6 +90,10 @@ const statusColors: Record<string, string> = {
   verified: 'bg-success/20 text-success',
   pending: 'bg-warning/20 text-warning',
   rejected: 'bg-destructive/20 text-destructive',
+  active: 'bg-success/20 text-success',
+  completed: 'bg-success/20 text-success',
+  frozen: 'bg-destructive/20 text-destructive',
+  blocked: 'bg-destructive/20 text-destructive',
 };
 
 export default function Admin() {
@@ -60,8 +103,15 @@ export default function Admin() {
   
   const [profiles, setProfiles] = useState<Profile[]>([]);
   const [kycDocuments, setKycDocuments] = useState<KycDocument[]>([]);
+  const [wallets, setWallets] = useState<WalletData[]>([]);
+  const [transactions, setTransactions] = useState<TransactionData[]>([]);
+  const [cards, setCards] = useState<CardData[]>([]);
+  const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [statsData, setStatsData] = useState(stats);
   const [loadingData, setLoadingData] = useState(true);
+  const [searchTerm, setSearchTerm] = useState('');
+  const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
+  const [userDetailOpen, setUserDetailOpen] = useState(false);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -85,34 +135,38 @@ export default function Admin() {
   const fetchData = async () => {
     setLoadingData(true);
     
-    // Fetch all profiles
-    const { data: profilesData } = await supabase
-      .from('profiles')
-      .select('*')
-      .order('created_at', { ascending: false });
-    
-    if (profilesData) {
-      setProfiles(profilesData as Profile[]);
-      
-      // Update stats
-      const pendingKyc = profilesData.filter(p => p.kyc_status === 'pending').length;
-      setStatsData([
-        { ...stats[0], value: profilesData.length.toString() },
-        { ...stats[1], value: '0' }, // Would come from cards table
-        { ...stats[2], value: '$0' }, // Would come from transactions
-        { ...stats[3], value: pendingKyc.toString() },
-      ]);
-    }
+    // Fetch all data in parallel
+    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes] = await Promise.all([
+      supabase.from('profiles').select('*').order('created_at', { ascending: false }),
+      supabase.from('kyc_documents').select('*').order('created_at', { ascending: false }),
+      supabase.from('wallets').select('*').order('created_at', { ascending: false }),
+      supabase.from('transactions').select('*').order('created_at', { ascending: false }),
+      supabase.from('cards').select('*').order('created_at', { ascending: false }),
+      supabase.from('user_roles').select('*'),
+    ]);
 
-    // Fetch KYC documents
-    const { data: kycData } = await supabase
-      .from('kyc_documents')
-      .select('*')
-      .order('created_at', { ascending: false });
+    if (profilesRes.data) setProfiles(profilesRes.data as Profile[]);
+    if (kycRes.data) setKycDocuments(kycRes.data as KycDocument[]);
+    if (walletsRes.data) setWallets(walletsRes.data as WalletData[]);
+    if (transactionsRes.data) setTransactions(transactionsRes.data as TransactionData[]);
+    if (cardsRes.data) setCards(cardsRes.data as CardData[]);
+    if (rolesRes.data) setUserRoles(rolesRes.data as UserRole[]);
+
+    // Calculate stats
+    const profilesData = profilesRes.data || [];
+    const cardsData = cardsRes.data || [];
+    const transactionsData = transactionsRes.data || [];
     
-    if (kycData) {
-      setKycDocuments(kycData as KycDocument[]);
-    }
+    const pendingKyc = profilesData.filter(p => p.kyc_status === 'pending').length;
+    const activeCards = cardsData.filter(c => c.status === 'active').length;
+    const totalVolume = transactionsData.reduce((sum, t) => sum + Math.abs(Number(t.amount)), 0);
+
+    setStatsData([
+      { ...stats[0], value: profilesData.length.toString() },
+      { ...stats[1], value: activeCards.toString() },
+      { ...stats[2], value: `$${totalVolume.toLocaleString()}` },
+      { ...stats[3], value: pendingKyc.toString() },
+    ]);
 
     setLoadingData(false);
   };
@@ -141,6 +195,79 @@ export default function Admin() {
     }
   };
 
+  const handleToggleAdmin = async (userId: string, currentlyAdmin: boolean) => {
+    if (currentlyAdmin) {
+      // Remove admin role
+      const { error } = await supabase
+        .from('user_roles')
+        .delete()
+        .eq('user_id', userId)
+        .eq('role', 'admin');
+      
+      if (!error) {
+        toast({ title: "Admin Removed", description: "User is no longer an admin." });
+        fetchData();
+      }
+    } else {
+      // Add admin role
+      const { error } = await supabase
+        .from('user_roles')
+        .insert({ user_id: userId, role: 'admin' });
+      
+      if (!error) {
+        toast({ title: "Admin Added", description: "User is now an admin." });
+        fetchData();
+      }
+    }
+  };
+
+  const handleCardStatusChange = async (cardId: string, newStatus: string) => {
+    const { error } = await supabase
+      .from('cards')
+      .update({ status: newStatus })
+      .eq('id', cardId);
+
+    if (!error) {
+      toast({ title: "Card Updated", description: `Card status changed to ${newStatus}.` });
+      fetchData();
+    }
+  };
+
+  const handleDocumentStatusChange = async (docId: string, newStatus: 'verified' | 'rejected', userId: string) => {
+    const { error } = await supabase
+      .from('kyc_documents')
+      .update({ status: newStatus, reviewed_at: new Date().toISOString(), reviewed_by: user?.id })
+      .eq('id', docId);
+
+    if (!error) {
+      toast({ title: "Document Updated", description: `Document ${newStatus}.` });
+      // Also update profile KYC status if approving
+      if (newStatus === 'verified') {
+        await supabase.from('profiles').update({ kyc_status: 'verified' }).eq('user_id', userId);
+      }
+      fetchData();
+    }
+  };
+
+  const getUserName = (userId: string) => {
+    const profile = profiles.find(p => p.user_id === userId);
+    return profile ? `${profile.first_name || ''} ${profile.last_name || profile.email}`.trim() : 'Unknown';
+  };
+
+  const isUserAdmin = (userId: string) => {
+    return userRoles.some(r => r.user_id === userId && r.role === 'admin');
+  };
+
+  const getUserWallets = (userId: string) => wallets.filter(w => w.user_id === userId);
+  const getUserTransactions = (userId: string) => transactions.filter(t => t.user_id === userId);
+  const getUserCards = (userId: string) => cards.filter(c => c.user_id === userId);
+
+  const filteredProfiles = profiles.filter(p => 
+    p.email.toLowerCase().includes(searchTerm.toLowerCase()) ||
+    (p.first_name?.toLowerCase() || '').includes(searchTerm.toLowerCase()) ||
+    (p.last_name?.toLowerCase() || '').includes(searchTerm.toLowerCase())
+  );
+
   if (loading || loadingData) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -160,7 +287,9 @@ export default function Admin() {
         <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mb-8 animate-slide-up">
           <div>
             <h1 className="text-3xl font-bold text-foreground">Admin Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Monitor and manage your platform</p>
+            <p className="text-muted-foreground mt-1">
+              Roles: <span className="font-medium text-primary">admin</span>, <span className="font-medium">user</span>
+            </p>
           </div>
           <div className="flex gap-3">
             <Button variant="outline" className="gap-2">
@@ -190,99 +319,329 @@ export default function Admin() {
           ))}
         </div>
 
-        <div className="grid lg:grid-cols-2 gap-8">
-          {/* Users Table */}
-          <div className="glass-card p-6 animate-slide-up delay-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-foreground">All Users</h3>
-              <div className="flex gap-2">
+        {/* Main Tabs */}
+        <Tabs defaultValue="users" className="space-y-6">
+          <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+            <TabsTrigger value="users" className="gap-2">
+              <Users className="w-4 h-4" /> Users
+            </TabsTrigger>
+            <TabsTrigger value="wallets" className="gap-2">
+              <Wallet className="w-4 h-4" /> Wallets
+            </TabsTrigger>
+            <TabsTrigger value="transactions" className="gap-2">
+              <ArrowLeftRight className="w-4 h-4" /> Transactions
+            </TabsTrigger>
+            <TabsTrigger value="cards" className="gap-2">
+              <CreditCard className="w-4 h-4" /> Cards
+            </TabsTrigger>
+            <TabsTrigger value="kyc" className="gap-2">
+              <FileCheck className="w-4 h-4" /> KYC
+            </TabsTrigger>
+          </TabsList>
+
+          {/* Users Tab */}
+          <TabsContent value="users">
+            <div className="glass-card p-6">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-lg font-semibold text-foreground">All Users ({profiles.length})</h3>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                  <Input placeholder="Search..." className="pl-9 w-40" />
+                  <Input 
+                    placeholder="Search users..." 
+                    className="pl-9 w-64" 
+                    value={searchTerm}
+                    onChange={(e) => setSearchTerm(e.target.value)}
+                  />
                 </div>
               </div>
-            </div>
 
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {profiles.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">No users yet</p>
-              ) : (
-                profiles.map((profile) => (
-                  <div
-                    key={profile.id}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white font-semibold">
-                        {(profile.first_name?.[0] || profile.email[0]).toUpperCase()}
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">
-                          {profile.first_name} {profile.last_name || profile.email}
-                        </p>
-                        <p className="text-xs text-muted-foreground">{profile.email}</p>
-                      </div>
-                    </div>
-                    <div className="flex items-center gap-2">
-                      <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', packageColors[profile.package_type] || 'bg-secondary')}>
-                        {profile.package_type}
-                      </span>
-                      <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', statusColors[profile.kyc_status] || 'bg-secondary')}>
-                        {profile.kyc_status}
-                      </span>
-                      {profile.kyc_status === 'pending' && (
-                        <div className="flex gap-1">
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleKycApprove(profile.user_id)}>
-                            <Check className="w-4 h-4 text-success" />
-                          </Button>
-                          <Button size="icon" variant="ghost" className="h-8 w-8" onClick={() => handleKycReject(profile.user_id)}>
-                            <X className="w-4 h-4 text-destructive" />
-                          </Button>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))
-              )}
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">User</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Package</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">KYC Status</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Role</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {filteredProfiles.map((profile) => (
+                      <tr key={profile.id} className="border-b border-border/50 hover:bg-secondary/30">
+                        <td className="p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white font-semibold">
+                              {(profile.first_name?.[0] || profile.email[0]).toUpperCase()}
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground">
+                                {profile.first_name} {profile.last_name}
+                              </p>
+                              <p className="text-xs text-muted-foreground">{profile.email}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', packageColors[profile.package_type] || 'bg-secondary')}>
+                            {profile.package_type}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', statusColors[profile.kyc_status] || 'bg-secondary')}>
+                            {profile.kyc_status}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span className={cn('px-2 py-1 rounded-full text-xs font-medium', isUserAdmin(profile.user_id) ? 'bg-primary/20 text-primary' : 'bg-secondary text-muted-foreground')}>
+                            {isUserAdmin(profile.user_id) ? 'Admin' : 'User'}
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="outline" 
+                              className="gap-1"
+                              onClick={() => { setSelectedUser(profile); setUserDetailOpen(true); }}
+                            >
+                              <Eye className="w-3 h-3" /> View
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant={isUserAdmin(profile.user_id) ? "destructive" : "default"}
+                              className="gap-1"
+                              onClick={() => handleToggleAdmin(profile.user_id, isUserAdmin(profile.user_id))}
+                            >
+                              <UserCog className="w-3 h-3" /> 
+                              {isUserAdmin(profile.user_id) ? 'Remove Admin' : 'Make Admin'}
+                            </Button>
+                            {profile.kyc_status === 'pending' && (
+                              <>
+                                <Button size="sm" variant="outline" onClick={() => handleKycApprove(profile.user_id)}>
+                                  <Check className="w-3 h-3" />
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleKycReject(profile.user_id)}>
+                                  <X className="w-3 h-3" />
+                                </Button>
+                              </>
+                            )}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
+          </TabsContent>
 
-          {/* KYC Documents */}
-          <div className="glass-card p-6 animate-slide-up delay-300">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-foreground">KYC Documents</h3>
-              <Button variant="outline" size="sm" className="gap-2">
-                <FileCheck className="w-4 h-4" /> Review
-              </Button>
+          {/* Wallets Tab */}
+          <TabsContent value="wallets">
+            <div className="glass-card p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-6">All Wallets ({wallets.length})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">User</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Currency</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
+                      <th className="text-right p-3 text-sm font-medium text-muted-foreground">Balance</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {wallets.map((wallet) => (
+                      <tr key={wallet.id} className="border-b border-border/50 hover:bg-secondary/30">
+                        <td className="p-3 font-medium">{getUserName(wallet.user_id)}</td>
+                        <td className="p-3">
+                          <span className="px-2 py-1 rounded-full text-xs font-medium bg-primary/20 text-primary">
+                            {wallet.currency}
+                          </span>
+                        </td>
+                        <td className="p-3 capitalize">{wallet.wallet_type}</td>
+                        <td className="p-3 text-right font-mono font-medium">
+                          {wallet.currency === 'UGX' ? 'UGX ' : wallet.currency === 'EUR' ? '€' : '$'}
+                          {Number(wallet.balance).toLocaleString()}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
+          </TabsContent>
 
-            <div className="space-y-3 max-h-96 overflow-y-auto">
-              {kycDocuments.length === 0 ? (
-                <p className="text-muted-foreground text-center py-8">No documents submitted yet</p>
-              ) : (
-                kycDocuments.map((doc) => (
-                  <div
-                    key={doc.id}
-                    className="flex items-center justify-between p-3 rounded-xl hover:bg-secondary/50 transition-colors"
-                  >
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-secondary flex items-center justify-center">
-                        <FileCheck className="w-5 h-5 text-muted-foreground" />
-                      </div>
-                      <div>
-                        <p className="font-medium text-foreground">{doc.file_name}</p>
-                        <p className="text-xs text-muted-foreground capitalize">{doc.document_type}</p>
-                      </div>
-                    </div>
-                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', statusColors[doc.status])}>
-                      {doc.status}
-                    </span>
-                  </div>
-                ))
-              )}
+          {/* Transactions Tab */}
+          <TabsContent value="transactions">
+            <div className="glass-card p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-6">All Transactions ({transactions.length})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">User</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Description</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Status</th>
+                      <th className="text-right p-3 text-sm font-medium text-muted-foreground">Amount</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Date</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {transactions.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                          No transactions yet
+                        </td>
+                      </tr>
+                    ) : (
+                      transactions.map((tx) => (
+                        <tr key={tx.id} className="border-b border-border/50 hover:bg-secondary/30">
+                          <td className="p-3 font-medium">{getUserName(tx.user_id)}</td>
+                          <td className="p-3 capitalize">{tx.transaction_type}</td>
+                          <td className="p-3 text-muted-foreground">{tx.description || tx.recipient_name || '-'}</td>
+                          <td className="p-3">
+                            <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', statusColors[tx.status] || 'bg-secondary')}>
+                              {tx.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right font-mono font-medium">
+                            {tx.currency === 'UGX' ? 'UGX ' : tx.currency === 'EUR' ? '€' : '$'}
+                            {Number(tx.amount).toLocaleString()}
+                          </td>
+                          <td className="p-3 text-muted-foreground text-sm">
+                            {new Date(tx.created_at).toLocaleDateString()}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
             </div>
-          </div>
-        </div>
+          </TabsContent>
+
+          {/* Cards Tab */}
+          <TabsContent value="cards">
+            <div className="glass-card p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-6">All Cards ({cards.length})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">User</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Card</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Status</th>
+                      <th className="text-right p-3 text-sm font-medium text-muted-foreground">Balance</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {cards.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                          No cards issued yet
+                        </td>
+                      </tr>
+                    ) : (
+                      cards.map((card) => (
+                        <tr key={card.id} className="border-b border-border/50 hover:bg-secondary/30">
+                          <td className="p-3 font-medium">{getUserName(card.user_id)}</td>
+                          <td className="p-3">
+                            <span className="font-mono">•••• {card.last_four}</span>
+                            <span className="text-xs text-muted-foreground ml-2 uppercase">{card.network}</span>
+                          </td>
+                          <td className="p-3 capitalize">{card.card_type}</td>
+                          <td className="p-3">
+                            <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', statusColors[card.status] || 'bg-secondary')}>
+                              {card.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-right font-mono font-medium">
+                            ${Number(card.balance).toLocaleString()}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex gap-2">
+                              {card.status === 'active' ? (
+                                <Button size="sm" variant="outline" onClick={() => handleCardStatusChange(card.id, 'frozen')}>
+                                  <Ban className="w-3 h-3 mr-1" /> Freeze
+                                </Button>
+                              ) : (
+                                <Button size="sm" variant="outline" onClick={() => handleCardStatusChange(card.id, 'active')}>
+                                  <CheckCircle className="w-3 h-3 mr-1" /> Activate
+                                </Button>
+                              )}
+                            </div>
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabsContent>
+
+          {/* KYC Tab */}
+          <TabsContent value="kyc">
+            <div className="glass-card p-6">
+              <h3 className="text-lg font-semibold text-foreground mb-6">KYC Documents ({kycDocuments.length})</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">User</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Document</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Type</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Status</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Submitted</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {kycDocuments.length === 0 ? (
+                      <tr>
+                        <td colSpan={6} className="p-8 text-center text-muted-foreground">
+                          No KYC documents submitted yet
+                        </td>
+                      </tr>
+                    ) : (
+                      kycDocuments.map((doc) => (
+                        <tr key={doc.id} className="border-b border-border/50 hover:bg-secondary/30">
+                          <td className="p-3 font-medium">{getUserName(doc.user_id)}</td>
+                          <td className="p-3">{doc.file_name}</td>
+                          <td className="p-3 capitalize">{doc.document_type}</td>
+                          <td className="p-3">
+                            <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', statusColors[doc.status] || 'bg-secondary')}>
+                              {doc.status}
+                            </span>
+                          </td>
+                          <td className="p-3 text-muted-foreground text-sm">
+                            {new Date(doc.created_at).toLocaleDateString()}
+                          </td>
+                          <td className="p-3">
+                            {doc.status === 'pending' && (
+                              <div className="flex gap-2">
+                                <Button size="sm" variant="outline" onClick={() => handleDocumentStatusChange(doc.id, 'verified', doc.user_id)}>
+                                  <Check className="w-3 h-3 mr-1" /> Approve
+                                </Button>
+                                <Button size="sm" variant="outline" onClick={() => handleDocumentStatusChange(doc.id, 'rejected', doc.user_id)}>
+                                  <X className="w-3 h-3 mr-1" /> Reject
+                                </Button>
+                              </div>
+                            )}
+                          </td>
+                        </tr>
+                      ))
+                    )}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+          </TabsContent>
+        </Tabs>
 
         {/* Security Panel */}
         <div className="glass-card p-6 mt-8 animate-slide-up delay-400">
@@ -296,24 +655,112 @@ export default function Admin() {
             </div>
           </div>
 
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid sm:grid-cols-4 gap-4">
             <div className="p-4 rounded-xl bg-success/10 border border-success/20">
               <p className="text-sm text-success font-medium">System Status</p>
               <p className="text-2xl font-bold text-foreground mt-1">Operational</p>
-              <p className="text-xs text-muted-foreground">All systems running</p>
             </div>
             <div className="p-4 rounded-xl bg-warning/10 border border-warning/20">
               <p className="text-sm text-warning font-medium">Pending KYC</p>
               <p className="text-2xl font-bold text-foreground mt-1">{profiles.filter(p => p.kyc_status === 'pending').length}</p>
-              <p className="text-xs text-muted-foreground">Awaiting verification</p>
             </div>
             <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
               <p className="text-sm text-primary font-medium">Total Users</p>
               <p className="text-2xl font-bold text-foreground mt-1">{profiles.length}</p>
-              <p className="text-xs text-muted-foreground">Registered accounts</p>
+            </div>
+            <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
+              <p className="text-sm text-purple-500 font-medium">Admin Users</p>
+              <p className="text-2xl font-bold text-foreground mt-1">{userRoles.filter(r => r.role === 'admin').length}</p>
             </div>
           </div>
         </div>
+
+        {/* User Detail Dialog */}
+        <Dialog open={userDetailOpen} onOpenChange={setUserDetailOpen}>
+          <DialogContent className="max-w-2xl">
+            <DialogHeader>
+              <DialogTitle>User Details</DialogTitle>
+              <DialogDescription>
+                {selectedUser?.email}
+              </DialogDescription>
+            </DialogHeader>
+            {selectedUser && (
+              <div className="space-y-6">
+                <div className="grid grid-cols-2 gap-4">
+                  <div>
+                    <p className="text-sm text-muted-foreground">Name</p>
+                    <p className="font-medium">{selectedUser.first_name} {selectedUser.last_name}</p>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Package</p>
+                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', packageColors[selectedUser.package_type])}>
+                      {selectedUser.package_type}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">KYC Status</p>
+                    <span className={cn('px-2 py-1 rounded-full text-xs font-medium capitalize', statusColors[selectedUser.kyc_status])}>
+                      {selectedUser.kyc_status}
+                    </span>
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Joined</p>
+                    <p className="font-medium">{new Date(selectedUser.created_at).toLocaleDateString()}</p>
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Wallets</h4>
+                  <div className="grid grid-cols-3 gap-3">
+                    {getUserWallets(selectedUser.user_id).map(wallet => (
+                      <div key={wallet.id} className="p-3 rounded-lg bg-secondary/50">
+                        <p className="text-xs text-muted-foreground">{wallet.currency}</p>
+                        <p className="font-mono font-medium">
+                          {wallet.currency === 'UGX' ? 'UGX ' : wallet.currency === 'EUR' ? '€' : '$'}
+                          {Number(wallet.balance).toLocaleString()}
+                        </p>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Recent Transactions</h4>
+                  {getUserTransactions(selectedUser.user_id).length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No transactions</p>
+                  ) : (
+                    <div className="space-y-2 max-h-40 overflow-y-auto">
+                      {getUserTransactions(selectedUser.user_id).slice(0, 5).map(tx => (
+                        <div key={tx.id} className="flex justify-between p-2 rounded bg-secondary/30">
+                          <span className="capitalize">{tx.transaction_type}</span>
+                          <span className="font-mono">{tx.currency} {Number(tx.amount).toLocaleString()}</span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+
+                <div>
+                  <h4 className="font-semibold mb-3">Cards</h4>
+                  {getUserCards(selectedUser.user_id).length === 0 ? (
+                    <p className="text-muted-foreground text-sm">No cards</p>
+                  ) : (
+                    <div className="space-y-2">
+                      {getUserCards(selectedUser.user_id).map(card => (
+                        <div key={card.id} className="flex justify-between p-2 rounded bg-secondary/30">
+                          <span>•••• {card.last_four}</span>
+                          <span className={cn('px-2 py-1 rounded-full text-xs', statusColors[card.status])}>
+                            {card.status}
+                          </span>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+          </DialogContent>
+        </Dialog>
       </main>
     </div>
   );
