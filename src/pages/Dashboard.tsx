@@ -9,6 +9,7 @@ import { RecentTransactions } from '@/components/dashboard/RecentTransactions';
 import { CardPreview } from '@/components/dashboard/CardPreview';
 import { CryptoWidget } from '@/components/dashboard/CryptoWidget';
 import { PackageContent } from '@/components/dashboard/PackageContent';
+import { KycUpload } from '@/components/kyc/KycUpload';
 
 export default function Dashboard() {
   const { user, loading } = useAuth();
@@ -58,6 +59,7 @@ export default function Dashboard() {
           {/* Sidebar */}
           <div className="space-y-6">
             <CardPreview />
+            <KycUpload />
             <CryptoWidget />
             <PackageContent />
           </div>
