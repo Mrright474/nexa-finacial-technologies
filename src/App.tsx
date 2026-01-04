@@ -13,6 +13,7 @@ import Cards from "./pages/Cards";
 import Crypto from "./pages/Crypto";
 import Transfers from "./pages/Transfers";
 import Admin from "./pages/Admin";
+import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -34,6 +35,7 @@ const App = () => (
               <Route path="/crypto" element={<Crypto />} />
               <Route path="/transfers" element={<Transfers />} />
               <Route path="/admin" element={<Admin />} />
+              <Route path="/profile" element={<Profile />} />
               <Route path="*" element={<NotFound />} />
             </Routes>
           </TooltipProvider>
