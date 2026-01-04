@@ -16,7 +16,7 @@ export function Navbar() {
   const { packageType, setPackageType, userName } = useApp();
 
   const isLanding = location.pathname === '/';
-  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers');
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile');
 
   const navLinks = [
     { href: '#features', label: 'Features' },
@@ -132,11 +132,13 @@ export function Navbar() {
                 <LogOut className="w-5 h-5" />
               </Button>
               
-              <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
-                <span className="text-white text-sm font-semibold">
-                  {userName?.[0]?.toUpperCase() || 'U'}
-                </span>
-              </div>
+              <Link to="/profile">
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                  <span className="text-white text-sm font-semibold">
+                    {userName?.[0]?.toUpperCase() || 'U'}
+                  </span>
+                </div>
+              </Link>
             </div>
           </div>
         </div>
