@@ -1,9 +1,14 @@
+import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Play, Shield, Zap, Globe } from 'lucide-react';
+import { ArrowRight, Play, Shield, Zap, Globe, X } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { NexaCard } from '@/components/cards/NexaCard';
+import { Dialog, DialogContent } from '@/components/ui/dialog';
+import demoVideo from '@/assets/demo-video.mp4';
 
 export function Hero() {
+  const [showDemo, setShowDemo] = useState(false);
+
   return (
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
       {/* Background Effects */}
@@ -40,7 +45,12 @@ export function Hero() {
                   Start Free <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
-              <Button variant="glass" size="xl" className="gap-2">
+              <Button 
+                variant="glass" 
+                size="xl" 
+                className="gap-2"
+                onClick={() => setShowDemo(true)}
+              >
                 <Play className="w-5 h-5" /> Watch Demo
               </Button>
             </div>
@@ -78,6 +88,24 @@ export function Hero() {
           </div>
         </div>
       </div>
+
+      {/* Demo Video Modal */}
+      <Dialog open={showDemo} onOpenChange={setShowDemo}>
+        <DialogContent className="max-w-4xl p-0 bg-black/95 border-border overflow-hidden">
+          <button
+            onClick={() => setShowDemo(false)}
+            className="absolute top-4 right-4 z-10 p-2 rounded-full bg-background/20 hover:bg-background/40 transition-colors"
+          >
+            <X className="h-5 w-5 text-white" />
+          </button>
+          <video
+            src={demoVideo}
+            controls
+            autoPlay
+            className="w-full aspect-video"
+          />
+        </DialogContent>
+      </Dialog>
     </section>
   );
 }
