@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Bell, Camera, Eye, EyeOff, Loader2, Lock, User, Shield, Smartphone, Copy, Check } from 'lucide-react';
+import { ArrowLeft, Bell, Camera, Eye, EyeOff, Loader2, Lock, User, Shield, Smartphone, Copy, Check, Monitor, Trash2, LogOut } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -56,6 +56,21 @@ export default function Profile() {
   const [disabling2FA, setDisabling2FA] = useState(false);
   const [copied, setCopied] = useState(false);
 
+  // Session management state
+  interface UserSession {
+    id: string;
+    session_id: string;
+    device_info: string | null;
+    ip_address: string | null;
+    last_active_at: string;
+    created_at: string;
+    is_current: boolean;
+  }
+  const [sessions, setSessions] = useState<UserSession[]>([]);
+  const [loadingSessions, setLoadingSessions] = useState(true);
+  const [signingOutAll, setSigningOutAll] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+
   // Load notification preferences and 2FA status
   useEffect(() => {
     const loadNotificationPreferences = async () => {
@@ -83,10 +98,131 @@ export default function Profile() {
         setTwoFactorEnabled(!!verifiedFactor);
       }
     };
+
+    const loadSessions = async () => {
+      if (!user) return;
+      
+      setLoadingSessions(true);
+      
+      // Get current session
+      const { data: sessionData } = await supabase.auth.getSession();
+      const currentSession = sessionData?.session;
+      if (currentSession) {
+        setCurrentSessionId(currentSession.access_token.slice(-20));
+      }
+
+      // Parse user agent for device info
+      const deviceInfo = navigator.userAgent;
+      const sessionId = currentSession?.access_token.slice(-20) || 'unknown';
+
+      // Upsert current session
+      await supabase.from('user_sessions').upsert({
+        user_id: user.id,
+        session_id: sessionId,
+        device_info: deviceInfo,
+        last_active_at: new Date().toISOString(),
+        is_current: true
+      }, { onConflict: 'session_id' });
+
+      // Fetch all sessions
+      const { data: sessionsData } = await supabase
+        .from('user_sessions')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('last_active_at', { ascending: false });
+
+      if (sessionsData) {
+        setSessions(sessionsData.map(s => ({
+          ...s,
+          is_current: s.session_id === sessionId
+        })));
+      }
+      setLoadingSessions(false);
+    };
     
     loadNotificationPreferences();
     check2FAStatus();
+    loadSessions();
   }, [user, notificationsInitialized]);
+
+  const handleSignOutAllSessions = async () => {
+    setSigningOutAll(true);
+    try {
+      // Delete all sessions except current from our tracking table
+      if (user && currentSessionId) {
+        await supabase
+          .from('user_sessions')
+          .delete()
+          .eq('user_id', user.id)
+          .neq('session_id', currentSessionId);
+      }
+
+      // Sign out globally (this will sign out all devices)
+      const { error } = await supabase.auth.signOut({ scope: 'global' });
+      if (error) throw error;
+
+      toast({
+        title: "Signed out everywhere",
+        description: "You've been signed out from all devices. Please log in again.",
+      });
+      
+      navigate('/auth');
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to sign out",
+        description: error.message,
+      });
+    } finally {
+      setSigningOutAll(false);
+    }
+  };
+
+  const handleRemoveSession = async (sessionId: string) => {
+    try {
+      await supabase
+        .from('user_sessions')
+        .delete()
+        .eq('session_id', sessionId);
+      
+      setSessions(prev => prev.filter(s => s.session_id !== sessionId));
+      
+      toast({
+        title: "Session removed",
+        description: "The session has been removed from your account.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to remove session",
+        description: error.message,
+      });
+    }
+  };
+
+  const parseDeviceInfo = (userAgent: string | null) => {
+    if (!userAgent) return { browser: 'Unknown', os: 'Unknown', device: 'Unknown' };
+    
+    let browser = 'Unknown';
+    let os = 'Unknown';
+    let device = 'Desktop';
+
+    // Detect browser
+    if (userAgent.includes('Chrome')) browser = 'Chrome';
+    else if (userAgent.includes('Firefox')) browser = 'Firefox';
+    else if (userAgent.includes('Safari')) browser = 'Safari';
+    else if (userAgent.includes('Edge')) browser = 'Edge';
+    else if (userAgent.includes('Opera')) browser = 'Opera';
+
+    // Detect OS
+    if (userAgent.includes('Windows')) os = 'Windows';
+    else if (userAgent.includes('Mac')) os = 'macOS';
+    else if (userAgent.includes('Linux')) os = 'Linux';
+    else if (userAgent.includes('Android')) { os = 'Android'; device = 'Mobile'; }
+    else if (userAgent.includes('iPhone') || userAgent.includes('iPad')) { os = 'iOS'; device = 'Mobile'; }
+
+    return { browser, os, device };
+  };
 
   const handleSaveNotifications = async () => {
     if (!user) return;
@@ -804,7 +940,99 @@ export default function Profile() {
             </CardContent>
           </Card>
 
-          {/* Account Info */}
+          {/* Session Management */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Monitor className="h-5 w-5" />
+                Active Sessions
+              </CardTitle>
+              <CardDescription>
+                Manage your active login sessions across devices
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingSessions ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : sessions.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No active sessions found</p>
+              ) : (
+                <div className="space-y-3">
+                  {sessions.map((session) => {
+                    const { browser, os, device } = parseDeviceInfo(session.device_info);
+                    return (
+                      <div
+                        key={session.id}
+                        className={`flex items-center justify-between p-4 rounded-lg ${
+                          session.is_current ? 'bg-primary/10 border border-primary/20' : 'bg-muted/50'
+                        }`}
+                      >
+                        <div className="flex items-center gap-3">
+                          <div className={`p-2 rounded-full ${session.is_current ? 'bg-primary/20' : 'bg-muted'}`}>
+                            {device === 'Mobile' ? (
+                              <Smartphone className={`h-5 w-5 ${session.is_current ? 'text-primary' : 'text-muted-foreground'}`} />
+                            ) : (
+                              <Monitor className={`h-5 w-5 ${session.is_current ? 'text-primary' : 'text-muted-foreground'}`} />
+                            )}
+                          </div>
+                          <div>
+                            <div className="flex items-center gap-2">
+                              <p className="font-medium">{browser} on {os}</p>
+                              {session.is_current && (
+                                <span className="px-2 py-0.5 rounded-full text-xs bg-primary/20 text-primary">
+                                  Current
+                                </span>
+                              )}
+                            </div>
+                            <p className="text-sm text-muted-foreground">
+                              Last active: {new Date(session.last_active_at).toLocaleString()}
+                            </p>
+                          </div>
+                        </div>
+                        {!session.is_current && (
+                          <Button
+                            variant="ghost"
+                            size="icon"
+                            onClick={() => handleRemoveSession(session.session_id)}
+                            className="text-muted-foreground hover:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        )}
+                      </div>
+                    );
+                  })}
+                </div>
+              )}
+
+              <div className="pt-4 border-t border-border">
+                <Button
+                  onClick={handleSignOutAllSessions}
+                  disabled={signingOutAll}
+                  variant="destructive"
+                  className="w-full sm:w-auto"
+                >
+                  {signingOutAll ? (
+                    <>
+                      <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                      Signing out...
+                    </>
+                  ) : (
+                    <>
+                      <LogOut className="h-4 w-4 mr-2" />
+                      Sign Out All Devices
+                    </>
+                  )}
+                </Button>
+                <p className="text-xs text-muted-foreground mt-2">
+                  This will sign you out from all devices including this one
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+
           <Card>
             <CardHeader>
               <CardTitle>Account Information</CardTitle>
