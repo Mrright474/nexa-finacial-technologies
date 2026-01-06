@@ -10,7 +10,9 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Camera, Eye, EyeOff, Loader2, Lock, User } from 'lucide-react';
+import { ArrowLeft, Bell, Camera, Eye, EyeOff, Loader2, Lock, User } from 'lucide-react';
+import { Switch } from '@/components/ui/switch';
+import { useEffect } from 'react';
 
 export default function Profile() {
   const { user, loading: authLoading } = useAuth();
@@ -34,6 +36,69 @@ export default function Profile() {
   const [showCurrentPassword, setShowCurrentPassword] = useState(false);
   const [showNewPassword, setShowNewPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+
+  // Notification preferences state
+  const [emailAlerts, setEmailAlerts] = useState(true);
+  const [transactionNotifications, setTransactionNotifications] = useState(true);
+  const [securityAlerts, setSecurityAlerts] = useState(true);
+  const [marketingEmails, setMarketingEmails] = useState(false);
+  const [savingNotifications, setSavingNotifications] = useState(false);
+  const [notificationsInitialized, setNotificationsInitialized] = useState(false);
+
+  // Load notification preferences
+  useEffect(() => {
+    const loadNotificationPreferences = async () => {
+      if (!user || notificationsInitialized) return;
+      
+      const { data } = await supabase
+        .from('notification_preferences')
+        .select('*')
+        .eq('user_id', user.id)
+        .single();
+      
+      if (data) {
+        setEmailAlerts(data.email_alerts);
+        setTransactionNotifications(data.transaction_notifications);
+        setSecurityAlerts(data.security_alerts);
+        setMarketingEmails(data.marketing_emails);
+      }
+      setNotificationsInitialized(true);
+    };
+    
+    loadNotificationPreferences();
+  }, [user, notificationsInitialized]);
+
+  const handleSaveNotifications = async () => {
+    if (!user) return;
+    
+    setSavingNotifications(true);
+    try {
+      const { error } = await supabase
+        .from('notification_preferences')
+        .upsert({
+          user_id: user.id,
+          email_alerts: emailAlerts,
+          transaction_notifications: transactionNotifications,
+          security_alerts: securityAlerts,
+          marketing_emails: marketingEmails,
+        }, { onConflict: 'user_id' });
+      
+      if (error) throw error;
+      
+      toast({
+        title: "Preferences saved!",
+        description: "Your notification settings have been updated.",
+      });
+    } catch (error: any) {
+      toast({
+        variant: "destructive",
+        title: "Failed to save",
+        description: error.message,
+      });
+    } finally {
+      setSavingNotifications(false);
+    }
+  };
 
   // Initialize form with profile data once loaded
   if (profile && !initialized) {
@@ -379,6 +444,91 @@ export default function Profile() {
                   </>
                 ) : (
                   'Update Password'
+                )}
+              </Button>
+            </CardContent>
+          </Card>
+
+          {/* Notification Preferences */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Bell className="h-5 w-5" />
+                Notification Preferences
+              </CardTitle>
+              <CardDescription>
+                Choose how you want to receive notifications
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-6">
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="emailAlerts">Email Alerts</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receive important account alerts via email
+                  </p>
+                </div>
+                <Switch
+                  id="emailAlerts"
+                  checked={emailAlerts}
+                  onCheckedChange={setEmailAlerts}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="transactionNotifications">Transaction Notifications</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Get notified about deposits, withdrawals, and transfers
+                  </p>
+                </div>
+                <Switch
+                  id="transactionNotifications"
+                  checked={transactionNotifications}
+                  onCheckedChange={setTransactionNotifications}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="securityAlerts">Security Alerts</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receive alerts about login attempts and security changes
+                  </p>
+                </div>
+                <Switch
+                  id="securityAlerts"
+                  checked={securityAlerts}
+                  onCheckedChange={setSecurityAlerts}
+                />
+              </div>
+
+              <div className="flex items-center justify-between">
+                <div className="space-y-0.5">
+                  <Label htmlFor="marketingEmails">Marketing Emails</Label>
+                  <p className="text-sm text-muted-foreground">
+                    Receive news, updates, and promotional offers
+                  </p>
+                </div>
+                <Switch
+                  id="marketingEmails"
+                  checked={marketingEmails}
+                  onCheckedChange={setMarketingEmails}
+                />
+              </div>
+
+              <Button
+                onClick={handleSaveNotifications}
+                disabled={savingNotifications}
+                className="w-full sm:w-auto"
+              >
+                {savingNotifications ? (
+                  <>
+                    <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+                    Saving...
+                  </>
+                ) : (
+                  'Save Preferences'
                 )}
               </Button>
             </CardContent>
