@@ -8,7 +8,8 @@ import { useAuth } from '@/hooks/useAuth';
 import { 
   Users, CreditCard, TrendingUp, AlertTriangle, 
   Search, Download, Shield, Wallet, ArrowLeftRight,
-  Activity, FileCheck, X, Check, Eye, UserCog, Ban, CheckCircle
+  Activity, FileCheck, X, Check, Eye, UserCog, Ban, CheckCircle,
+  Monitor, Smartphone, MapPin, Clock, AlertCircle
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -73,6 +74,27 @@ interface UserRole {
   role: string;
 }
 
+interface LoginActivityData {
+  id: string;
+  user_id: string;
+  device_info: string | null;
+  browser: string | null;
+  os: string | null;
+  ip_address: string | null;
+  is_new_device: boolean;
+  created_at: string;
+}
+
+interface UserSessionData {
+  id: string;
+  user_id: string;
+  session_id: string;
+  device_info: string | null;
+  ip_address: string | null;
+  last_active_at: string;
+  is_current: boolean;
+}
+
 const stats = [
   { label: 'Total Users', value: '0', icon: Users, color: 'from-blue-500 to-cyan-500' },
   { label: 'Active Cards', value: '0', icon: CreditCard, color: 'from-purple-500 to-pink-500' },
@@ -107,9 +129,12 @@ export default function Admin() {
   const [transactions, setTransactions] = useState<TransactionData[]>([]);
   const [cards, setCards] = useState<CardData[]>([]);
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
+  const [loginActivity, setLoginActivity] = useState<LoginActivityData[]>([]);
+  const [userSessions, setUserSessions] = useState<UserSessionData[]>([]);
   const [statsData, setStatsData] = useState(stats);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
+  const [securitySearchTerm, setSecuritySearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [userDetailOpen, setUserDetailOpen] = useState(false);
 
@@ -136,13 +161,15 @@ export default function Admin() {
     setLoadingData(true);
     
     // Fetch all data in parallel
-    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes] = await Promise.all([
+    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes, loginActivityRes, sessionsRes] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', { ascending: false }),
       supabase.from('kyc_documents').select('*').order('created_at', { ascending: false }),
       supabase.from('wallets').select('*').order('created_at', { ascending: false }),
       supabase.from('transactions').select('*').order('created_at', { ascending: false }),
       supabase.from('cards').select('*').order('created_at', { ascending: false }),
       supabase.from('user_roles').select('*'),
+      supabase.from('login_activity').select('*').order('created_at', { ascending: false }).limit(100),
+      supabase.from('user_sessions').select('*').order('last_active_at', { ascending: false }),
     ]);
 
     if (profilesRes.data) setProfiles(profilesRes.data as Profile[]);
@@ -151,6 +178,8 @@ export default function Admin() {
     if (transactionsRes.data) setTransactions(transactionsRes.data as TransactionData[]);
     if (cardsRes.data) setCards(cardsRes.data as CardData[]);
     if (rolesRes.data) setUserRoles(rolesRes.data as UserRole[]);
+    if (loginActivityRes.data) setLoginActivity(loginActivityRes.data as LoginActivityData[]);
+    if (sessionsRes.data) setUserSessions(sessionsRes.data as UserSessionData[]);
 
     // Calculate stats
     const profilesData = profilesRes.data || [];
@@ -321,7 +350,7 @@ export default function Admin() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid grid-cols-5 w-full max-w-2xl">
+          <TabsList className="grid grid-cols-6 w-full max-w-3xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="w-4 h-4" /> Users
             </TabsTrigger>
@@ -336,6 +365,9 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="kyc" className="gap-2">
               <FileCheck className="w-4 h-4" /> KYC
+            </TabsTrigger>
+            <TabsTrigger value="security" className="gap-2">
+              <Shield className="w-4 h-4" /> Security
             </TabsTrigger>
           </TabsList>
 
@@ -674,6 +706,205 @@ export default function Admin() {
             </div>
           </div>
         </div>
+
+        {/* Security Tab */}
+        <TabsContent value="security">
+          <div className="space-y-6">
+            {/* Security Stats */}
+            <div className="grid sm:grid-cols-4 gap-4">
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <Activity className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Logins</p>
+                    <p className="text-2xl font-bold">{loginActivity.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/20">
+                    <AlertCircle className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">New Devices</p>
+                    <p className="text-2xl font-bold">{loginActivity.filter(a => a.is_new_device).length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-500/20">
+                    <Monitor className="w-5 h-5 text-green-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Active Sessions</p>
+                    <p className="text-2xl font-bold">{userSessions.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-500/20">
+                    <Users className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Unique Users</p>
+                    <p className="text-2xl font-bold">{new Set(loginActivity.map(a => a.user_id)).size}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Login Activity Table */}
+            <div className="glass-card p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Recent Login Activity</h3>
+                  <p className="text-sm text-muted-foreground">Monitor user logins and detect suspicious activity</p>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search by email..." 
+                    className="pl-9 w-64" 
+                    value={securitySearchTerm}
+                    onChange={(e) => setSecuritySearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">User</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Device</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">IP Address</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Time</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Status</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {loginActivity
+                      .filter(activity => {
+                        if (!securitySearchTerm) return true;
+                        const userName = getUserName(activity.user_id).toLowerCase();
+                        return userName.includes(securitySearchTerm.toLowerCase());
+                      })
+                      .slice(0, 50)
+                      .map((activity) => (
+                        <tr key={activity.id} className="border-b border-border/50 hover:bg-secondary/30">
+                          <td className="p-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-sm font-semibold">
+                                {getUserName(activity.user_id)[0]?.toUpperCase() || '?'}
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground text-sm">{getUserName(activity.user_id)}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              {activity.os?.toLowerCase().includes('android') || activity.os?.toLowerCase().includes('ios') ? (
+                                <Smartphone className="w-4 h-4 text-muted-foreground" />
+                              ) : (
+                                <Monitor className="w-4 h-4 text-muted-foreground" />
+                              )}
+                              <span className="text-sm">{activity.browser || 'Unknown'} on {activity.os || 'Unknown'}</span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <MapPin className="w-3 h-3" />
+                              {activity.ip_address || 'Unknown'}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              {new Date(activity.created_at).toLocaleString()}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            {activity.is_new_device ? (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-amber-500/20 text-amber-500">
+                                New Device
+                              </span>
+                            ) : (
+                              <span className="px-2 py-1 rounded-full text-xs font-medium bg-success/20 text-success">
+                                Known Device
+                              </span>
+                            )}
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {loginActivity.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No login activity recorded yet</p>
+                )}
+              </div>
+            </div>
+
+            {/* Active Sessions */}
+            <div className="glass-card p-6">
+              <div className="mb-6">
+                <h3 className="text-lg font-semibold text-foreground">Active Sessions</h3>
+                <p className="text-sm text-muted-foreground">View all active user sessions across the platform</p>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">User</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Device Info</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">IP Address</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Last Active</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {userSessions.slice(0, 50).map((session) => (
+                      <tr key={session.id} className="border-b border-border/50 hover:bg-secondary/30">
+                        <td className="p-3">
+                          <div className="flex items-center gap-3">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-sm font-semibold">
+                              {getUserName(session.user_id)[0]?.toUpperCase() || '?'}
+                            </div>
+                            <div>
+                              <p className="font-medium text-foreground text-sm">{getUserName(session.user_id)}</p>
+                            </div>
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-sm text-muted-foreground truncate max-w-xs block">
+                            {session.device_info?.slice(0, 50) || 'Unknown'}...
+                          </span>
+                        </td>
+                        <td className="p-3">
+                          <span className="text-sm text-muted-foreground">{session.ip_address || 'Unknown'}</span>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                            <Clock className="w-3 h-3" />
+                            {new Date(session.last_active_at).toLocaleString()}
+                          </div>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+                {userSessions.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No active sessions</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
 
         {/* User Detail Dialog */}
         <Dialog open={userDetailOpen} onOpenChange={setUserDetailOpen}>
