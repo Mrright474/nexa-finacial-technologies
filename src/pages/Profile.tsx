@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Bell, Camera, Eye, EyeOff, Loader2, Lock, User, Shield, Smartphone, Copy, Check, Monitor, Trash2, LogOut } from 'lucide-react';
+import { ArrowLeft, Bell, Camera, Eye, EyeOff, Loader2, Lock, User, Shield, Smartphone, Copy, Check, Monitor, Trash2, LogOut, Activity, MapPin, Clock } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -70,6 +70,20 @@ export default function Profile() {
   const [loadingSessions, setLoadingSessions] = useState(true);
   const [signingOutAll, setSigningOutAll] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+
+  // Login activity state
+  interface LoginActivity {
+    id: string;
+    device_info: string | null;
+    browser: string | null;
+    os: string | null;
+    ip_address: string | null;
+    location: string | null;
+    is_new_device: boolean;
+    created_at: string;
+  }
+  const [loginActivity, setLoginActivity] = useState<LoginActivity[]>([]);
+  const [loadingActivity, setLoadingActivity] = useState(true);
 
   // Load notification preferences and 2FA status
   useEffect(() => {
@@ -139,10 +153,28 @@ export default function Profile() {
       }
       setLoadingSessions(false);
     };
+
+    const loadLoginActivity = async () => {
+      if (!user) return;
+      
+      setLoadingActivity(true);
+      const { data } = await supabase
+        .from('login_activity')
+        .select('*')
+        .eq('user_id', user.id)
+        .order('created_at', { ascending: false })
+        .limit(10);
+      
+      if (data) {
+        setLoginActivity(data);
+      }
+      setLoadingActivity(false);
+    };
     
     loadNotificationPreferences();
     check2FAStatus();
     loadSessions();
+    loadLoginActivity();
   }, [user, notificationsInitialized]);
 
   const handleSignOutAllSessions = async () => {
@@ -1030,6 +1062,75 @@ export default function Profile() {
                   This will sign you out from all devices including this one
                 </p>
               </div>
+            </CardContent>
+          </Card>
+
+          {/* Login Activity */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <Activity className="h-5 w-5" />
+                Recent Login Activity
+              </CardTitle>
+              <CardDescription>
+                Monitor recent logins to your account. You'll be notified when a new device is detected.
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {loadingActivity ? (
+                <div className="flex items-center justify-center py-8">
+                  <Loader2 className="h-6 w-6 animate-spin text-muted-foreground" />
+                </div>
+              ) : loginActivity.length === 0 ? (
+                <p className="text-center text-muted-foreground py-4">No login activity recorded yet</p>
+              ) : (
+                <div className="space-y-3">
+                  {loginActivity.map((activity) => (
+                    <div
+                      key={activity.id}
+                      className={`flex items-center justify-between p-4 rounded-lg ${
+                        activity.is_new_device ? 'bg-amber-500/10 border border-amber-500/20' : 'bg-muted/50'
+                      }`}
+                    >
+                      <div className="flex items-center gap-3">
+                        <div className={`p-2 rounded-full ${activity.is_new_device ? 'bg-amber-500/20' : 'bg-muted'}`}>
+                          {activity.os?.toLowerCase().includes('android') || activity.os?.toLowerCase().includes('ios') ? (
+                            <Smartphone className={`h-5 w-5 ${activity.is_new_device ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                          ) : (
+                            <Monitor className={`h-5 w-5 ${activity.is_new_device ? 'text-amber-500' : 'text-muted-foreground'}`} />
+                          )}
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <p className="font-medium">{activity.browser || 'Unknown'} on {activity.os || 'Unknown'}</p>
+                            {activity.is_new_device && (
+                              <span className="px-2 py-0.5 rounded-full text-xs bg-amber-500/20 text-amber-500 font-medium">
+                                New Device
+                              </span>
+                            )}
+                          </div>
+                          <div className="flex items-center gap-3 text-sm text-muted-foreground">
+                            <span className="flex items-center gap-1">
+                              <Clock className="h-3 w-3" />
+                              {new Date(activity.created_at).toLocaleString()}
+                            </span>
+                            {activity.ip_address && (
+                              <span className="flex items-center gap-1">
+                                <MapPin className="h-3 w-3" />
+                                {activity.ip_address}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+              <p className="text-xs text-muted-foreground mt-4 flex items-center gap-1">
+                <Shield className="h-3 w-3" />
+                Email notifications are sent when a new device logs into your account
+              </p>
             </CardContent>
           </Card>
 
