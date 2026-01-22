@@ -9,7 +9,8 @@ import {
   Users, CreditCard, TrendingUp, AlertTriangle, 
   Search, Download, Shield, Wallet, ArrowLeftRight,
   Activity, FileCheck, X, Check, Eye, UserCog, Ban, CheckCircle,
-  Monitor, Smartphone, MapPin, Clock, AlertCircle, LogOut, Trash2
+  Monitor, Smartphone, MapPin, Clock, AlertCircle, LogOut, Trash2,
+  ScrollText, UserX, Key, Settings
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -95,6 +96,17 @@ interface UserSessionData {
   is_current: boolean;
 }
 
+interface AuditLogData {
+  id: string;
+  admin_user_id: string;
+  action_type: string;
+  target_user_id: string | null;
+  target_session_id: string | null;
+  details: Record<string, any> | null;
+  ip_address: string | null;
+  created_at: string;
+}
+
 const stats = [
   { label: 'Total Users', value: '0', icon: Users, color: 'from-blue-500 to-cyan-500' },
   { label: 'Active Cards', value: '0', icon: CreditCard, color: 'from-purple-500 to-pink-500' },
@@ -131,10 +143,12 @@ export default function Admin() {
   const [userRoles, setUserRoles] = useState<UserRole[]>([]);
   const [loginActivity, setLoginActivity] = useState<LoginActivityData[]>([]);
   const [userSessions, setUserSessions] = useState<UserSessionData[]>([]);
+  const [auditLogs, setAuditLogs] = useState<AuditLogData[]>([]);
   const [statsData, setStatsData] = useState(stats);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [securitySearchTerm, setSecuritySearchTerm] = useState('');
+  const [auditSearchTerm, setAuditSearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [userDetailOpen, setUserDetailOpen] = useState(false);
   const [terminatingSession, setTerminatingSession] = useState<string | null>(null);
@@ -163,7 +177,7 @@ export default function Admin() {
     setLoadingData(true);
     
     // Fetch all data in parallel
-    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes, loginActivityRes, sessionsRes] = await Promise.all([
+    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes, loginActivityRes, sessionsRes, auditLogsRes] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', { ascending: false }),
       supabase.from('kyc_documents').select('*').order('created_at', { ascending: false }),
       supabase.from('wallets').select('*').order('created_at', { ascending: false }),
@@ -172,6 +186,7 @@ export default function Admin() {
       supabase.from('user_roles').select('*'),
       supabase.from('login_activity').select('*').order('created_at', { ascending: false }).limit(100),
       supabase.from('user_sessions').select('*').order('last_active_at', { ascending: false }),
+      supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
     ]);
 
     if (profilesRes.data) setProfiles(profilesRes.data as Profile[]);
@@ -182,6 +197,7 @@ export default function Admin() {
     if (rolesRes.data) setUserRoles(rolesRes.data as UserRole[]);
     if (loginActivityRes.data) setLoginActivity(loginActivityRes.data as LoginActivityData[]);
     if (sessionsRes.data) setUserSessions(sessionsRes.data as UserSessionData[]);
+    if (auditLogsRes.data) setAuditLogs(auditLogsRes.data as AuditLogData[]);
 
     // Calculate stats
     const profilesData = profilesRes.data || [];
@@ -425,7 +441,7 @@ export default function Admin() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid grid-cols-6 w-full max-w-3xl">
+          <TabsList className="grid grid-cols-7 w-full max-w-4xl">
             <TabsTrigger value="users" className="gap-2">
               <Users className="w-4 h-4" /> Users
             </TabsTrigger>
@@ -443,6 +459,9 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="security" className="gap-2">
               <Shield className="w-4 h-4" /> Security
+            </TabsTrigger>
+            <TabsTrigger value="audit" className="gap-2">
+              <ScrollText className="w-4 h-4" /> Audit
             </TabsTrigger>
           </TabsList>
 
@@ -1000,6 +1019,167 @@ export default function Admin() {
                 </table>
                 {userSessions.length === 0 && (
                   <p className="text-center text-muted-foreground py-8">No active sessions</p>
+                )}
+              </div>
+            </div>
+          </div>
+        </TabsContent>
+
+        {/* Audit Log Tab */}
+        <TabsContent value="audit">
+          <div className="space-y-6">
+            {/* Audit Stats */}
+            <div className="grid sm:grid-cols-4 gap-4">
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-primary/20">
+                    <ScrollText className="w-5 h-5 text-primary" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Total Actions</p>
+                    <p className="text-2xl font-bold">{auditLogs.length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-destructive/20">
+                    <UserX className="w-5 h-5 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Force Sign-outs</p>
+                    <p className="text-2xl font-bold">{auditLogs.filter(a => a.action_type === 'force_signout').length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-500/20">
+                    <Trash2 className="w-5 h-5 text-amber-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Sessions Terminated</p>
+                    <p className="text-2xl font-bold">{auditLogs.filter(a => a.action_type.includes('terminate')).length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-500/20">
+                    <Users className="w-5 h-5 text-purple-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Active Admins</p>
+                    <p className="text-2xl font-bold">{new Set(auditLogs.map(a => a.admin_user_id)).size}</p>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            {/* Audit Log Table */}
+            <div className="glass-card p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Admin Activity Log</h3>
+                  <p className="text-sm text-muted-foreground">Complete record of all administrative actions</p>
+                </div>
+                <div className="relative">
+                  <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
+                  <Input 
+                    placeholder="Search actions..." 
+                    className="pl-9 w-64" 
+                    value={auditSearchTerm}
+                    onChange={(e) => setAuditSearchTerm(e.target.value)}
+                  />
+                </div>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Admin</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Action</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Target User</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Details</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">IP Address</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {auditLogs
+                      .filter(log => {
+                        if (!auditSearchTerm) return true;
+                        const adminName = getUserName(log.admin_user_id).toLowerCase();
+                        const targetName = log.target_user_id ? getUserName(log.target_user_id).toLowerCase() : '';
+                        const actionType = log.action_type.toLowerCase();
+                        const search = auditSearchTerm.toLowerCase();
+                        return adminName.includes(search) || targetName.includes(search) || actionType.includes(search);
+                      })
+                      .slice(0, 100)
+                      .map((log) => (
+                        <tr key={log.id} className="border-b border-border/50 hover:bg-secondary/30">
+                          <td className="p-3">
+                            <div className="flex items-center gap-3">
+                              <div className="w-8 h-8 rounded-full bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center text-white text-sm font-semibold">
+                                {getUserName(log.admin_user_id)[0]?.toUpperCase() || '?'}
+                              </div>
+                              <div>
+                                <p className="font-medium text-foreground text-sm">{getUserName(log.admin_user_id)}</p>
+                              </div>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <span className={cn(
+                              'px-2 py-1 rounded-full text-xs font-medium',
+                              log.action_type === 'force_signout' && 'bg-destructive/20 text-destructive',
+                              log.action_type === 'terminate_session' && 'bg-amber-500/20 text-amber-500',
+                              log.action_type === 'terminate_all_sessions' && 'bg-orange-500/20 text-orange-500',
+                              !['force_signout', 'terminate_session', 'terminate_all_sessions'].includes(log.action_type) && 'bg-primary/20 text-primary'
+                            )}>
+                              {log.action_type.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase())}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            {log.target_user_id ? (
+                              <div className="flex items-center gap-2">
+                                <div className="w-6 h-6 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center text-white text-xs font-semibold">
+                                  {getUserName(log.target_user_id)[0]?.toUpperCase() || '?'}
+                                </div>
+                                <span className="text-sm">{getUserName(log.target_user_id)}</span>
+                              </div>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            {log.details ? (
+                              <span className="text-xs text-muted-foreground font-mono bg-secondary/50 px-2 py-1 rounded">
+                                {Object.entries(log.details).map(([k, v]) => `${k}: ${v}`).join(', ').slice(0, 50)}
+                                {Object.entries(log.details).map(([k, v]) => `${k}: ${v}`).join(', ').length > 50 && '...'}
+                              </span>
+                            ) : (
+                              <span className="text-sm text-muted-foreground">—</span>
+                            )}
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <MapPin className="w-3 h-3" />
+                              {log.ip_address || 'Unknown'}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              {new Date(log.created_at).toLocaleString()}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {auditLogs.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No admin actions recorded yet</p>
                 )}
               </div>
             </div>
