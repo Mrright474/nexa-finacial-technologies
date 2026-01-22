@@ -5,6 +5,38 @@ const corsHeaders = {
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
 };
 
+// Helper function to log admin actions
+async function logAuditEvent(
+  supabaseAdmin: any,
+  adminUserId: string,
+  actionType: string,
+  targetUserId?: string,
+  targetSessionId?: string,
+  details?: Record<string, any>,
+  ipAddress?: string
+) {
+  try {
+    const { error } = await supabaseAdmin
+      .from('audit_logs')
+      .insert({
+        admin_user_id: adminUserId,
+        action_type: actionType,
+        target_user_id: targetUserId || null,
+        target_session_id: targetSessionId || null,
+        details: details || null,
+        ip_address: ipAddress || null,
+      });
+    
+    if (error) {
+      console.error('Failed to log audit event:', error);
+    } else {
+      console.log(`Audit logged: ${actionType} by ${adminUserId}`);
+    }
+  } catch (err) {
+    console.error('Audit logging error:', err);
+  }
+}
+
 Deno.serve(async (req) => {
   // Handle CORS preflight requests
   if (req.method === 'OPTIONS') {
@@ -31,6 +63,11 @@ Deno.serve(async (req) => {
         { status: 401, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
       );
     }
+
+    // Get client IP address
+    const clientIp = req.headers.get('x-forwarded-for')?.split(',')[0] || 
+                     req.headers.get('x-real-ip') || 
+                     'unknown';
 
     const supabase = createClient(supabaseUrl, Deno.env.get('SUPABASE_ANON_KEY')!, {
       global: { headers: { Authorization: authHeader } }
@@ -72,6 +109,13 @@ Deno.serve(async (req) => {
         );
       }
 
+      // Get session info before deleting
+      const { data: sessionInfo } = await supabaseAdmin
+        .from('user_sessions')
+        .select('*')
+        .eq('id', sessionId)
+        .single();
+
       // Delete the session record from our tracking table
       const { error: deleteError } = await supabaseAdmin
         .from('user_sessions')
@@ -85,6 +129,20 @@ Deno.serve(async (req) => {
           { status: 500, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      // Log the action
+      await logAuditEvent(
+        supabaseAdmin,
+        user.id,
+        'terminate_session',
+        sessionInfo?.user_id,
+        sessionId,
+        { 
+          device_info: sessionInfo?.device_info,
+          session_ip: sessionInfo?.ip_address 
+        },
+        clientIp
+      );
 
       console.log(`Session ${sessionId} terminated successfully`);
       return new Response(
@@ -101,6 +159,12 @@ Deno.serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      // Get session count before deleting
+      const { data: sessionsCount } = await supabaseAdmin
+        .from('user_sessions')
+        .select('id')
+        .eq('user_id', userId);
 
       // Delete all session records for this user
       const { error: deleteError } = await supabaseAdmin
@@ -124,6 +188,17 @@ Deno.serve(async (req) => {
         // Still return success as we deleted session records
       }
 
+      // Log the action
+      await logAuditEvent(
+        supabaseAdmin,
+        user.id,
+        'terminate_all_sessions',
+        userId,
+        undefined,
+        { sessions_terminated: sessionsCount?.length || 0 },
+        clientIp
+      );
+
       console.log(`All sessions for user ${userId} terminated successfully`);
       return new Response(
         JSON.stringify({ success: true, message: 'All sessions terminated' }),
@@ -139,6 +214,13 @@ Deno.serve(async (req) => {
           { status: 400, headers: { ...corsHeaders, 'Content-Type': 'application/json' } }
         );
       }
+
+      // Get user info for audit log
+      const { data: targetUserInfo } = await supabaseAdmin
+        .from('profiles')
+        .select('email, first_name, last_name')
+        .eq('user_id', userId)
+        .single();
 
       // Sign out all sessions for this user
       const { error: signOutError } = await supabaseAdmin.auth.admin.signOut(userId, 'global');
@@ -156,6 +238,20 @@ Deno.serve(async (req) => {
         .from('user_sessions')
         .delete()
         .eq('user_id', userId);
+
+      // Log the action
+      await logAuditEvent(
+        supabaseAdmin,
+        user.id,
+        'force_signout',
+        userId,
+        undefined,
+        { 
+          target_email: targetUserInfo?.email,
+          target_name: `${targetUserInfo?.first_name || ''} ${targetUserInfo?.last_name || ''}`.trim()
+        },
+        clientIp
+      );
 
       console.log(`User ${userId} forcefully signed out`);
       return new Response(
