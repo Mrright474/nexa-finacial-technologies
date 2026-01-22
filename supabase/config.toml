@@ -1,1 +1,7 @@
 project_id = "ubgpfhkwvntcavjbknxq"
+
+[functions.send-login-notification]
+verify_jwt = false
+
+[functions.terminate-session]
+verify_jwt = false

@@ -9,7 +9,7 @@ import {
   Users, CreditCard, TrendingUp, AlertTriangle, 
   Search, Download, Shield, Wallet, ArrowLeftRight,
   Activity, FileCheck, X, Check, Eye, UserCog, Ban, CheckCircle,
-  Monitor, Smartphone, MapPin, Clock, AlertCircle
+  Monitor, Smartphone, MapPin, Clock, AlertCircle, LogOut, Trash2
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -137,6 +137,8 @@ export default function Admin() {
   const [securitySearchTerm, setSecuritySearchTerm] = useState('');
   const [selectedUser, setSelectedUser] = useState<Profile | null>(null);
   const [userDetailOpen, setUserDetailOpen] = useState(false);
+  const [terminatingSession, setTerminatingSession] = useState<string | null>(null);
+  const [terminatingUser, setTerminatingUser] = useState<string | null>(null);
 
   useEffect(() => {
     if (!loading && !user) {
@@ -275,6 +277,79 @@ export default function Admin() {
         await supabase.from('profiles').update({ kyc_status: 'verified' }).eq('user_id', userId);
       }
       fetchData();
+    }
+  };
+
+  const handleTerminateSession = async (sessionId: string) => {
+    setTerminatingSession(sessionId);
+    try {
+      const { data: { session } } = await supabase.auth.getSession();
+      const response = await supabase.functions.invoke('terminate-session', {
+        body: { action: 'terminate_session', sessionId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      toast({ title: "Session Terminated", description: "The session has been terminated successfully." });
+      fetchData();
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive",
+        title: "Error", 
+        description: error.message || "Failed to terminate session" 
+      });
+    } finally {
+      setTerminatingSession(null);
+    }
+  };
+
+  const handleTerminateAllSessions = async (userId: string) => {
+    setTerminatingUser(userId);
+    try {
+      const response = await supabase.functions.invoke('terminate-session', {
+        body: { action: 'terminate_all_sessions', userId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      toast({ title: "All Sessions Terminated", description: "All sessions for this user have been terminated." });
+      fetchData();
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive",
+        title: "Error", 
+        description: error.message || "Failed to terminate sessions" 
+      });
+    } finally {
+      setTerminatingUser(null);
+    }
+  };
+
+  const handleForceSignOut = async (userId: string, userName: string) => {
+    setTerminatingUser(userId);
+    try {
+      const response = await supabase.functions.invoke('terminate-session', {
+        body: { action: 'force_signout', userId },
+      });
+
+      if (response.error) {
+        throw new Error(response.error.message);
+      }
+
+      toast({ title: "User Signed Out", description: `${userName} has been signed out from all devices.` });
+      fetchData();
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive",
+        title: "Error", 
+        description: error.message || "Failed to sign out user" 
+      });
+    } finally {
+      setTerminatingUser(null);
     }
   };
 
@@ -854,7 +929,7 @@ export default function Admin() {
             <div className="glass-card p-6">
               <div className="mb-6">
                 <h3 className="text-lg font-semibold text-foreground">Active Sessions</h3>
-                <p className="text-sm text-muted-foreground">View all active user sessions across the platform</p>
+                <p className="text-sm text-muted-foreground">View and manage active user sessions across the platform</p>
               </div>
 
               <div className="overflow-x-auto">
@@ -865,6 +940,7 @@ export default function Admin() {
                       <th className="text-left p-3 text-sm font-medium text-muted-foreground">Device Info</th>
                       <th className="text-left p-3 text-sm font-medium text-muted-foreground">IP Address</th>
                       <th className="text-left p-3 text-sm font-medium text-muted-foreground">Last Active</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Actions</th>
                     </tr>
                   </thead>
                   <tbody>
@@ -872,7 +948,7 @@ export default function Admin() {
                       <tr key={session.id} className="border-b border-border/50 hover:bg-secondary/30">
                         <td className="p-3">
                           <div className="flex items-center gap-3">
-                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-green-500 to-emerald-500 flex items-center justify-center text-white text-sm font-semibold">
+                            <div className="w-8 h-8 rounded-full bg-gradient-to-br from-success to-emerald-600 flex items-center justify-center text-white text-sm font-semibold">
                               {getUserName(session.user_id)[0]?.toUpperCase() || '?'}
                             </div>
                             <div>
@@ -892,6 +968,30 @@ export default function Admin() {
                           <div className="flex items-center gap-1 text-sm text-muted-foreground">
                             <Clock className="w-3 h-3" />
                             {new Date(session.last_active_at).toLocaleString()}
+                          </div>
+                        </td>
+                        <td className="p-3">
+                          <div className="flex gap-2">
+                            <Button 
+                              size="sm" 
+                              variant="destructive"
+                              className="gap-1"
+                              disabled={terminatingSession === session.id}
+                              onClick={() => handleTerminateSession(session.id)}
+                            >
+                              <Trash2 className="w-3 h-3" />
+                              {terminatingSession === session.id ? 'Terminating...' : 'Terminate'}
+                            </Button>
+                            <Button 
+                              size="sm" 
+                              variant="outline"
+                              className="gap-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
+                              disabled={terminatingUser === session.user_id}
+                              onClick={() => handleForceSignOut(session.user_id, getUserName(session.user_id))}
+                            >
+                              <LogOut className="w-3 h-3" />
+                              {terminatingUser === session.user_id ? 'Signing Out...' : 'Sign Out All'}
+                            </Button>
                           </div>
                         </td>
                       </tr>
