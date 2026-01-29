@@ -10,7 +10,7 @@ import {
   Search, Download, Shield, Wallet, ArrowLeftRight,
   Activity, FileCheck, X, Check, Eye, UserCog, Ban, CheckCircle,
   Monitor, Smartphone, MapPin, Clock, AlertCircle, LogOut, Trash2,
-  ScrollText, UserX, Key, Settings
+  ScrollText, UserX, Key, Settings, Radio
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -191,6 +191,56 @@ export default function Admin() {
       fetchData();
     }
   }, [isAdmin]);
+
+  // Real-time subscription for security monitoring
+  useEffect(() => {
+    if (!isAdmin) return;
+
+    const channel = supabase
+      .channel('admin-security-monitoring')
+      .on(
+        'postgres_changes',
+        {
+          event: 'INSERT',
+          schema: 'public',
+          table: 'login_activity',
+        },
+        (payload) => {
+          console.log('New login activity detected:', payload);
+          // Add new login activity to the top of the list
+          setLoginActivity((prev) => [payload.new as LoginActivityData, ...prev].slice(0, 100));
+          toast({
+            title: "New Login Detected",
+            description: `User logged in from ${(payload.new as LoginActivityData).ip_address || 'unknown location'}`,
+          });
+        }
+      )
+      .on(
+        'postgres_changes',
+        {
+          event: '*',
+          schema: 'public',
+          table: 'user_sessions',
+        },
+        (payload) => {
+          console.log('Session change detected:', payload);
+          if (payload.eventType === 'INSERT') {
+            setUserSessions((prev) => [payload.new as UserSessionData, ...prev]);
+          } else if (payload.eventType === 'DELETE') {
+            setUserSessions((prev) => prev.filter((s) => s.id !== payload.old.id));
+          } else if (payload.eventType === 'UPDATE') {
+            setUserSessions((prev) =>
+              prev.map((s) => (s.id === payload.new.id ? (payload.new as UserSessionData) : s))
+            );
+          }
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [isAdmin, toast]);
 
   const fetchData = async () => {
     setLoadingData(true);
@@ -880,9 +930,15 @@ export default function Admin() {
             {/* Login Activity Table */}
             <div className="glass-card p-6">
               <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h3 className="text-lg font-semibold text-foreground">Recent Login Activity</h3>
-                  <p className="text-sm text-muted-foreground">Monitor user logins and detect suspicious activity</p>
+                <div className="flex items-center gap-3">
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">Recent Login Activity</h3>
+                    <p className="text-sm text-muted-foreground">Monitor user logins and detect suspicious activity</p>
+                  </div>
+                  <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
+                    <Radio className="w-3 h-3 text-success animate-pulse" />
+                    <span className="text-xs font-medium text-success">Live</span>
+                  </div>
                 </div>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
@@ -971,9 +1027,15 @@ export default function Admin() {
 
             {/* Active Sessions */}
             <div className="glass-card p-6">
-              <div className="mb-6">
-                <h3 className="text-lg font-semibold text-foreground">Active Sessions</h3>
-                <p className="text-sm text-muted-foreground">View and manage active user sessions across the platform</p>
+              <div className="flex items-center gap-3 mb-6">
+                <div>
+                  <h3 className="text-lg font-semibold text-foreground">Active Sessions</h3>
+                  <p className="text-sm text-muted-foreground">View and manage active user sessions across the platform</p>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 rounded-full bg-success/10 border border-success/20">
+                  <Radio className="w-3 h-3 text-success animate-pulse" />
+                  <span className="text-xs font-medium text-success">Live</span>
+                </div>
               </div>
 
               <div className="overflow-x-auto">
