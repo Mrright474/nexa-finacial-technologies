@@ -16,6 +16,16 @@ import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { 
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog';
 
 interface Profile {
   id: string;
@@ -153,6 +163,15 @@ export default function Admin() {
   const [userDetailOpen, setUserDetailOpen] = useState(false);
   const [terminatingSession, setTerminatingSession] = useState<string | null>(null);
   const [terminatingUser, setTerminatingUser] = useState<string | null>(null);
+  
+  // Confirmation dialog state
+  const [confirmDialog, setConfirmDialog] = useState<{
+    open: boolean;
+    type: 'terminate_session' | 'force_signout' | null;
+    sessionId?: string;
+    userId?: string;
+    userName?: string;
+  }>({ open: false, type: null });
 
   useEffect(() => {
     if (!loading && !user) {
@@ -296,10 +315,31 @@ export default function Admin() {
     }
   };
 
+  const openTerminateSessionDialog = (sessionId: string) => {
+    setConfirmDialog({
+      open: true,
+      type: 'terminate_session',
+      sessionId,
+    });
+  };
+
+  const openForceSignOutDialog = (userId: string, userName: string) => {
+    setConfirmDialog({
+      open: true,
+      type: 'force_signout',
+      userId,
+      userName,
+    });
+  };
+
+  const closeConfirmDialog = () => {
+    setConfirmDialog({ open: false, type: null });
+  };
+
   const handleTerminateSession = async (sessionId: string) => {
     setTerminatingSession(sessionId);
+    closeConfirmDialog();
     try {
-      const { data: { session } } = await supabase.auth.getSession();
       const response = await supabase.functions.invoke('terminate-session', {
         body: { action: 'terminate_session', sessionId },
       });
@@ -321,32 +361,9 @@ export default function Admin() {
     }
   };
 
-  const handleTerminateAllSessions = async (userId: string) => {
-    setTerminatingUser(userId);
-    try {
-      const response = await supabase.functions.invoke('terminate-session', {
-        body: { action: 'terminate_all_sessions', userId },
-      });
-
-      if (response.error) {
-        throw new Error(response.error.message);
-      }
-
-      toast({ title: "All Sessions Terminated", description: "All sessions for this user have been terminated." });
-      fetchData();
-    } catch (error: any) {
-      toast({ 
-        variant: "destructive",
-        title: "Error", 
-        description: error.message || "Failed to terminate sessions" 
-      });
-    } finally {
-      setTerminatingUser(null);
-    }
-  };
-
   const handleForceSignOut = async (userId: string, userName: string) => {
     setTerminatingUser(userId);
+    closeConfirmDialog();
     try {
       const response = await supabase.functions.invoke('terminate-session', {
         body: { action: 'force_signout', userId },
@@ -366,6 +383,14 @@ export default function Admin() {
       });
     } finally {
       setTerminatingUser(null);
+    }
+  };
+
+  const handleConfirmAction = () => {
+    if (confirmDialog.type === 'terminate_session' && confirmDialog.sessionId) {
+      handleTerminateSession(confirmDialog.sessionId);
+    } else if (confirmDialog.type === 'force_signout' && confirmDialog.userId && confirmDialog.userName) {
+      handleForceSignOut(confirmDialog.userId, confirmDialog.userName);
     }
   };
 
@@ -996,7 +1021,7 @@ export default function Admin() {
                               variant="destructive"
                               className="gap-1"
                               disabled={terminatingSession === session.id}
-                              onClick={() => handleTerminateSession(session.id)}
+                              onClick={() => openTerminateSessionDialog(session.id)}
                             >
                               <Trash2 className="w-3 h-3" />
                               {terminatingSession === session.id ? 'Terminating...' : 'Terminate'}
@@ -1006,7 +1031,7 @@ export default function Admin() {
                               variant="outline"
                               className="gap-1 border-destructive text-destructive hover:bg-destructive hover:text-destructive-foreground"
                               disabled={terminatingUser === session.user_id}
-                              onClick={() => handleForceSignOut(session.user_id, getUserName(session.user_id))}
+                              onClick={() => openForceSignOutDialog(session.user_id, getUserName(session.user_id))}
                             >
                               <LogOut className="w-3 h-3" />
                               {terminatingUser === session.user_id ? 'Signing Out...' : 'Sign Out All'}
@@ -1272,6 +1297,33 @@ export default function Admin() {
             )}
           </DialogContent>
         </Dialog>
+
+        {/* Confirmation Dialog */}
+        <AlertDialog open={confirmDialog.open} onOpenChange={(open) => !open && closeConfirmDialog()}>
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle>
+                {confirmDialog.type === 'terminate_session' 
+                  ? 'Terminate Session?' 
+                  : 'Force Sign Out User?'}
+              </AlertDialogTitle>
+              <AlertDialogDescription>
+                {confirmDialog.type === 'terminate_session' 
+                  ? 'This will immediately end this session. The user will need to log in again to continue using this device.'
+                  : `This will sign out ${confirmDialog.userName || 'this user'} from all devices and invalidate all their active sessions. They will need to log in again.`}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel>Cancel</AlertDialogCancel>
+              <AlertDialogAction 
+                onClick={handleConfirmAction}
+                className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+              >
+                {confirmDialog.type === 'terminate_session' ? 'Terminate Session' : 'Force Sign Out'}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
       </main>
     </div>
   );
