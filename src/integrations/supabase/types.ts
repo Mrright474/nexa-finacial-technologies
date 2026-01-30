@@ -14,6 +14,36 @@ export type Database = {
   }
   public: {
     Tables: {
+      account_lockouts: {
+        Row: {
+          created_at: string
+          email: string
+          failed_attempts: number
+          id: string
+          locked_until: string
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          failed_attempts?: number
+          id?: string
+          locked_until: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          failed_attempts?: number
+          id?: string
+          locked_until?: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       audit_logs: {
         Row: {
           action_type: string
@@ -83,6 +113,33 @@ export type Database = {
           spend_limit?: number
           status?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      failed_login_attempts: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          ip_address: string | null
+          location: string | null
+          user_agent: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          user_agent?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          ip_address?: string | null
+          location?: string | null
+          user_agent?: string | null
         }
         Relationships: []
       }
@@ -367,12 +424,34 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      check_account_lockout: {
+        Args: { p_email: string }
+        Returns: {
+          is_locked: boolean
+          locked_until: string
+          reason: string
+        }[]
+      }
+      clear_failed_attempts: { Args: { p_email: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
           _user_id: string
         }
         Returns: boolean
+      }
+      record_failed_login: {
+        Args: {
+          p_email: string
+          p_ip_address?: string
+          p_location?: string
+          p_user_agent?: string
+        }
+        Returns: {
+          attempt_count: number
+          should_lock: boolean
+          unique_ips: number
+        }[]
       }
     }
     Enums: {
