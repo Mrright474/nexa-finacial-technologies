@@ -10,7 +10,7 @@ import {
   Search, Download, Shield, Wallet, ArrowLeftRight,
   Activity, FileCheck, X, Check, Eye, UserCog, Ban, CheckCircle,
   Monitor, Smartphone, MapPin, Clock, AlertCircle, LogOut, Trash2,
-  ScrollText, UserX, Key, Settings, Radio
+  ScrollText, UserX, Key, Settings, Radio, Lock, Unlock
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
@@ -117,6 +117,16 @@ interface AuditLogData {
   created_at: string;
 }
 
+interface LockedAccountData {
+  id: string;
+  email: string;
+  locked_until: string;
+  reason: string | null;
+  failed_attempts: number;
+  created_at: string;
+  updated_at: string;
+}
+
 const stats = [
   { label: 'Total Users', value: '0', icon: Users, color: 'from-blue-500 to-cyan-500' },
   { label: 'Active Cards', value: '0', icon: CreditCard, color: 'from-purple-500 to-pink-500' },
@@ -154,6 +164,7 @@ export default function Admin() {
   const [loginActivity, setLoginActivity] = useState<LoginActivityData[]>([]);
   const [userSessions, setUserSessions] = useState<UserSessionData[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogData[]>([]);
+  const [lockedAccounts, setLockedAccounts] = useState<LockedAccountData[]>([]);
   const [statsData, setStatsData] = useState(stats);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -163,6 +174,7 @@ export default function Admin() {
   const [userDetailOpen, setUserDetailOpen] = useState(false);
   const [terminatingSession, setTerminatingSession] = useState<string | null>(null);
   const [terminatingUser, setTerminatingUser] = useState<string | null>(null);
+  const [unlockingAccount, setUnlockingAccount] = useState<string | null>(null);
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -246,7 +258,7 @@ export default function Admin() {
     setLoadingData(true);
     
     // Fetch all data in parallel
-    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes, loginActivityRes, sessionsRes, auditLogsRes] = await Promise.all([
+    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes, loginActivityRes, sessionsRes, auditLogsRes, lockedAccountsRes] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', { ascending: false }),
       supabase.from('kyc_documents').select('*').order('created_at', { ascending: false }),
       supabase.from('wallets').select('*').order('created_at', { ascending: false }),
@@ -256,6 +268,7 @@ export default function Admin() {
       supabase.from('login_activity').select('*').order('created_at', { ascending: false }).limit(100),
       supabase.from('user_sessions').select('*').order('last_active_at', { ascending: false }),
       supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
+      supabase.from('account_lockouts').select('*').order('locked_until', { ascending: false }),
     ]);
 
     if (profilesRes.data) setProfiles(profilesRes.data as Profile[]);
@@ -267,6 +280,7 @@ export default function Admin() {
     if (loginActivityRes.data) setLoginActivity(loginActivityRes.data as LoginActivityData[]);
     if (sessionsRes.data) setUserSessions(sessionsRes.data as UserSessionData[]);
     if (auditLogsRes.data) setAuditLogs(auditLogsRes.data as AuditLogData[]);
+    if (lockedAccountsRes.data) setLockedAccounts(lockedAccountsRes.data as LockedAccountData[]);
 
     // Calculate stats
     const profilesData = profilesRes.data || [];
@@ -442,6 +456,57 @@ export default function Admin() {
     } else if (confirmDialog.type === 'force_signout' && confirmDialog.userId && confirmDialog.userName) {
       handleForceSignOut(confirmDialog.userId, confirmDialog.userName);
     }
+  };
+
+  const handleUnlockAccount = async (email: string) => {
+    setUnlockingAccount(email);
+    try {
+      const { data, error } = await supabase.functions.invoke('check-account-lockout', {
+        body: { email },
+      });
+      
+      if (error) throw error;
+
+      // Also delete from the lockouts table directly
+      const { error: deleteError } = await supabase
+        .from('account_lockouts')
+        .delete()
+        .eq('email', email);
+
+      if (deleteError) throw deleteError;
+
+      toast({ 
+        title: "Account Unlocked", 
+        description: `${email} has been unlocked and can now sign in.` 
+      });
+      
+      // Refresh data
+      fetchData();
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive",
+        title: "Error", 
+        description: error.message || "Failed to unlock account" 
+      });
+    } finally {
+      setUnlockingAccount(null);
+    }
+  };
+
+  const getActiveLockedAccounts = () => {
+    const now = new Date();
+    return lockedAccounts.filter(account => new Date(account.locked_until) > now);
+  };
+
+  const getRemainingLockTime = (lockedUntil: string) => {
+    const remaining = new Date(lockedUntil).getTime() - Date.now();
+    if (remaining <= 0) return 'Expired';
+    const minutes = Math.ceil(remaining / 60000);
+    if (minutes >= 60) {
+      const hours = Math.floor(minutes / 60);
+      return `${hours}h ${minutes % 60}m`;
+    }
+    return `${minutes}m`;
   };
 
   const getUserName = (userId: string) => {
@@ -880,7 +945,7 @@ export default function Admin() {
         <TabsContent value="security">
           <div className="space-y-6">
             {/* Security Stats */}
-            <div className="grid sm:grid-cols-4 gap-4">
+            <div className="grid sm:grid-cols-3 lg:grid-cols-5 gap-4">
               <div className="glass-card p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/20">
@@ -925,7 +990,95 @@ export default function Admin() {
                   </div>
                 </div>
               </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-destructive/20">
+                    <Lock className="w-5 h-5 text-destructive" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Locked Accounts</p>
+                    <p className="text-2xl font-bold">{getActiveLockedAccounts().length}</p>
+                  </div>
+                </div>
+              </div>
             </div>
+
+            {/* Locked Accounts Section */}
+            {getActiveLockedAccounts().length > 0 && (
+              <div className="glass-card p-6 border-l-4 border-l-destructive">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-destructive/20">
+                      <Lock className="w-5 h-5 text-destructive" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">Locked Accounts</h3>
+                      <p className="text-sm text-muted-foreground">Accounts temporarily locked due to failed login attempts</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Email</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Reason</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Failed Attempts</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Locked Until</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Time Remaining</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getActiveLockedAccounts().map((account) => (
+                        <tr key={account.id} className="border-b border-border/50 hover:bg-secondary/30">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-destructive/20 flex items-center justify-center">
+                                <Lock className="w-4 h-4 text-destructive" />
+                              </div>
+                              <span className="font-medium text-foreground">{account.email}</span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <span className="text-sm text-muted-foreground">{account.reason || 'Multiple failed login attempts'}</span>
+                          </td>
+                          <td className="p-3">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-destructive/20 text-destructive">
+                              {account.failed_attempts} attempts
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              {new Date(account.locked_until).toLocaleString()}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-warning/20 text-warning">
+                              {getRemainingLockTime(account.locked_until)}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 border-success text-success hover:bg-success hover:text-success-foreground"
+                              disabled={unlockingAccount === account.email}
+                              onClick={() => handleUnlockAccount(account.email)}
+                            >
+                              <Unlock className="w-3 h-3" />
+                              {unlockingAccount === account.email ? 'Unlocking...' : 'Unlock'}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
 
             {/* Login Activity Table */}
             <div className="glass-card p-6">
