@@ -5,3 +5,6 @@ verify_jwt = false
 
 [functions.terminate-session]
 verify_jwt = false
+
+[functions.check-account-lockout]
+verify_jwt = false

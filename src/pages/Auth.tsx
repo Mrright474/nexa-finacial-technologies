@@ -57,8 +57,13 @@ export default function Auth() {
         await signIn(email, password);
       }
     } else {
-      const { error } = await signIn(email, password);
-      if (!error) {
+      const result = await signIn(email, password);
+      if (result.locked) {
+        // Account is locked - show detailed message
+        setIsSubmitting(false);
+        return;
+      }
+      if (!result.error) {
         navigate('/dashboard');
       }
     }

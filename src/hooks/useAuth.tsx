@@ -3,14 +3,22 @@ import { User, Session } from '@supabase/supabase-js';
 import { supabase } from '@/integrations/supabase/client';
 import { useToast } from '@/hooks/use-toast';
 
+interface LockoutInfo {
+  isLocked: boolean;
+  lockedUntil: string | null;
+  reason: string | null;
+  remainingMinutes: number;
+}
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any }>;
+  signIn: (email: string, password: string) => Promise<{ error: any; locked?: boolean; lockoutInfo?: LockoutInfo }>;
   signOut: () => Promise<void>;
+  checkAccountLockout: (email: string) => Promise<LockoutInfo>;
 }
 
 // Parse user agent to get browser and OS info
@@ -139,19 +147,78 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return { error };
   };
 
-  const signIn = async (email: string, password: string) => {
+  const checkAccountLockout = async (email: string): Promise<LockoutInfo> => {
+    try {
+      const { data, error } = await supabase.functions.invoke('check-account-lockout', {
+        body: { email },
+      });
+
+      if (error) {
+        console.error('Error checking lockout:', error);
+        return { isLocked: false, lockedUntil: null, reason: null, remainingMinutes: 0 };
+      }
+
+      return data as LockoutInfo;
+    } catch (error) {
+      console.error('Error checking lockout:', error);
+      return { isLocked: false, lockedUntil: null, reason: null, remainingMinutes: 0 };
+    }
+  };
+
+  const recordFailedLogin = async (email: string) => {
+    try {
+      const { deviceInfo } = parseUserAgent();
+      await supabase.functions.invoke('check-account-lockout?action=record-failure', {
+        body: { 
+          email,
+          userAgent: deviceInfo,
+        },
+      });
+    } catch (error) {
+      console.error('Error recording failed login:', error);
+    }
+  };
+
+  const clearFailedAttempts = async (email: string) => {
+    try {
+      await supabase.functions.invoke('check-account-lockout?action=clear', {
+        body: { email },
+      });
+    } catch (error) {
+      console.error('Error clearing failed attempts:', error);
+    }
+  };
+
+  const signIn = async (email: string, password: string): Promise<{ error: any; locked?: boolean; lockoutInfo?: LockoutInfo }> => {
+    // First check if account is locked
+    const lockoutInfo = await checkAccountLockout(email);
+    
+    if (lockoutInfo.isLocked) {
+      toast({
+        variant: "destructive",
+        title: "Account Locked",
+        description: `Your account is temporarily locked. Please try again in ${lockoutInfo.remainingMinutes} minutes.`,
+      });
+      return { error: { message: 'Account is locked' }, locked: true, lockoutInfo };
+    }
+
     const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
 
     if (error) {
+      // Record failed attempt
+      await recordFailedLogin(email);
+      
       toast({
         variant: "destructive",
         title: "Sign in failed",
         description: error.message,
       });
     } else if (data.user) {
+      // Clear failed attempts on successful login
+      await clearFailedAttempts(email);
       // Send login notification for new device detection
       sendLoginNotification(data.user.id, email);
     }
@@ -169,7 +236,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   };
 
   return (
-    <AuthContext.Provider value={{ user, session, loading, isAdmin, signUp, signIn, signOut }}>
+    <AuthContext.Provider value={{ user, session, loading, isAdmin, signUp, signIn, signOut, checkAccountLockout }}>
       {children}
     </AuthContext.Provider>
   );
