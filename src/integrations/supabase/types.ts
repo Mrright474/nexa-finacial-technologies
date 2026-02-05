@@ -143,6 +143,36 @@ export type Database = {
         }
         Relationships: []
       }
+      ip_blocklist: {
+        Row: {
+          blocked_until: string
+          created_at: string
+          failed_attempts: number
+          id: string
+          ip_address: string
+          reason: string | null
+          updated_at: string
+        }
+        Insert: {
+          blocked_until: string
+          created_at?: string
+          failed_attempts?: number
+          id?: string
+          ip_address: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Update: {
+          blocked_until?: string
+          created_at?: string
+          failed_attempts?: number
+          id?: string
+          ip_address?: string
+          reason?: string | null
+          updated_at?: string
+        }
+        Relationships: []
+      }
       kyc_documents: {
         Row: {
           created_at: string
@@ -432,7 +462,16 @@ export type Database = {
           reason: string
         }[]
       }
+      check_ip_block: {
+        Args: { p_ip_address: string }
+        Returns: {
+          blocked_until: string
+          is_blocked: boolean
+          reason: string
+        }[]
+      }
       clear_failed_attempts: { Args: { p_email: string }; Returns: undefined }
+      clear_ip_block: { Args: { p_ip_address: string }; Returns: undefined }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
@@ -451,6 +490,14 @@ export type Database = {
           attempt_count: number
           should_lock: boolean
           unique_ips: number
+        }[]
+      }
+      record_ip_failure: {
+        Args: { p_email?: string; p_ip_address: string }
+        Returns: {
+          attempt_count: number
+          should_block: boolean
+          unique_emails: number
         }[]
       }
     }
