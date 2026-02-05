@@ -127,6 +127,16 @@ interface LockedAccountData {
   updated_at: string;
 }
 
+interface BlockedIpData {
+  id: string;
+  ip_address: string;
+  blocked_until: string;
+  failed_attempts: number;
+  reason: string | null;
+  created_at: string;
+  updated_at: string;
+}
+
 const stats = [
   { label: 'Total Users', value: '0', icon: Users, color: 'from-blue-500 to-cyan-500' },
   { label: 'Active Cards', value: '0', icon: CreditCard, color: 'from-purple-500 to-pink-500' },
@@ -165,6 +175,7 @@ export default function Admin() {
   const [userSessions, setUserSessions] = useState<UserSessionData[]>([]);
   const [auditLogs, setAuditLogs] = useState<AuditLogData[]>([]);
   const [lockedAccounts, setLockedAccounts] = useState<LockedAccountData[]>([]);
+  const [blockedIps, setBlockedIps] = useState<BlockedIpData[]>([]);
   const [statsData, setStatsData] = useState(stats);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -175,6 +186,7 @@ export default function Admin() {
   const [terminatingSession, setTerminatingSession] = useState<string | null>(null);
   const [terminatingUser, setTerminatingUser] = useState<string | null>(null);
   const [unlockingAccount, setUnlockingAccount] = useState<string | null>(null);
+  const [unblockingIp, setUnblockingIp] = useState<string | null>(null);
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -258,7 +270,7 @@ export default function Admin() {
     setLoadingData(true);
     
     // Fetch all data in parallel
-    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes, loginActivityRes, sessionsRes, auditLogsRes, lockedAccountsRes] = await Promise.all([
+    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes, loginActivityRes, sessionsRes, auditLogsRes, lockedAccountsRes, blockedIpsRes] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', { ascending: false }),
       supabase.from('kyc_documents').select('*').order('created_at', { ascending: false }),
       supabase.from('wallets').select('*').order('created_at', { ascending: false }),
@@ -269,6 +281,7 @@ export default function Admin() {
       supabase.from('user_sessions').select('*').order('last_active_at', { ascending: false }),
       supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
       supabase.from('account_lockouts').select('*').order('locked_until', { ascending: false }),
+      supabase.from('ip_blocklist').select('*').order('blocked_until', { ascending: false }),
     ]);
 
     if (profilesRes.data) setProfiles(profilesRes.data as Profile[]);
@@ -281,6 +294,7 @@ export default function Admin() {
     if (sessionsRes.data) setUserSessions(sessionsRes.data as UserSessionData[]);
     if (auditLogsRes.data) setAuditLogs(auditLogsRes.data as AuditLogData[]);
     if (lockedAccountsRes.data) setLockedAccounts(lockedAccountsRes.data as LockedAccountData[]);
+    if (blockedIpsRes.data) setBlockedIps(blockedIpsRes.data as BlockedIpData[]);
 
     // Calculate stats
     const profilesData = profilesRes.data || [];
@@ -498,6 +512,11 @@ export default function Admin() {
     return lockedAccounts.filter(account => new Date(account.locked_until) > now);
   };
 
+  const getActiveBlockedIps = () => {
+    const now = new Date();
+    return blockedIps.filter(ip => new Date(ip.blocked_until) > now);
+  };
+
   const getRemainingLockTime = (lockedUntil: string) => {
     const remaining = new Date(lockedUntil).getTime() - Date.now();
     if (remaining <= 0) return 'Expired';
@@ -507,6 +526,33 @@ export default function Admin() {
       return `${hours}h ${minutes % 60}m`;
     }
     return `${minutes}m`;
+  };
+
+  const handleUnblockIp = async (ipAddress: string) => {
+    setUnblockingIp(ipAddress);
+    try {
+      const { error } = await supabase.functions.invoke('check-account-lockout?action=unblock-ip', {
+        body: { ipAddress },
+      });
+      
+      if (error) throw error;
+
+      toast({ 
+        title: "IP Unblocked", 
+        description: `${ipAddress} has been unblocked and can now access the platform.` 
+      });
+      
+      // Refresh data
+      fetchData();
+    } catch (error: any) {
+      toast({ 
+        variant: "destructive",
+        title: "Error", 
+        description: error.message || "Failed to unblock IP" 
+      });
+    } finally {
+      setUnblockingIp(null);
+    }
   };
 
   const getUserName = (userId: string) => {
@@ -945,7 +991,7 @@ export default function Admin() {
         <TabsContent value="security">
           <div className="space-y-6">
             {/* Security Stats */}
-            <div className="grid sm:grid-cols-3 lg:grid-cols-5 gap-4">
+            <div className="grid sm:grid-cols-3 lg:grid-cols-6 gap-4">
               <div className="glass-card p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/20">
@@ -998,6 +1044,17 @@ export default function Admin() {
                   <div>
                     <p className="text-sm text-muted-foreground">Locked Accounts</p>
                     <p className="text-2xl font-bold">{getActiveLockedAccounts().length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-500/20">
+                    <Ban className="w-5 h-5 text-orange-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Blocked IPs</p>
+                    <p className="text-2xl font-bold">{getActiveBlockedIps().length}</p>
                   </div>
                 </div>
               </div>
@@ -1070,6 +1127,83 @@ export default function Admin() {
                             >
                               <Unlock className="w-3 h-3" />
                               {unlockingAccount === account.email ? 'Unlocking...' : 'Unlock'}
+                            </Button>
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
+            {/* Blocked IPs Section */}
+            {getActiveBlockedIps().length > 0 && (
+              <div className="glass-card p-6 border-l-4 border-l-orange-500">
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2 rounded-lg bg-orange-500/20">
+                      <Ban className="w-5 h-5 text-orange-500" />
+                    </div>
+                    <div>
+                      <h3 className="text-lg font-semibold text-foreground">Blocked IP Addresses</h3>
+                      <p className="text-sm text-muted-foreground">IP addresses blocked due to suspicious activity or repeated attacks</p>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="overflow-x-auto">
+                  <table className="w-full">
+                    <thead>
+                      <tr className="border-b border-border">
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">IP Address</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Reason</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Failed Attempts</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Blocked Until</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Time Remaining</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Actions</th>
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {getActiveBlockedIps().map((blockedIp) => (
+                        <tr key={blockedIp.id} className="border-b border-border/50 hover:bg-secondary/30">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-orange-500/20 flex items-center justify-center">
+                                <Ban className="w-4 h-4 text-orange-500" />
+                              </div>
+                              <span className="font-mono font-medium text-foreground">{blockedIp.ip_address}</span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <span className="text-sm text-muted-foreground">{blockedIp.reason || 'Excessive failed login attempts'}</span>
+                          </td>
+                          <td className="p-3">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-500/20 text-orange-500">
+                              {blockedIp.failed_attempts} attempts
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              {new Date(blockedIp.blocked_until).toLocaleString()}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <span className="px-2 py-1 rounded-full text-xs font-medium bg-warning/20 text-warning">
+                              {getRemainingLockTime(blockedIp.blocked_until)}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              className="gap-1 border-success text-success hover:bg-success hover:text-success-foreground"
+                              disabled={unblockingIp === blockedIp.ip_address}
+                              onClick={() => handleUnblockIp(blockedIp.ip_address)}
+                            >
+                              <Unlock className="w-3 h-3" />
+                              {unblockingIp === blockedIp.ip_address ? 'Unblocking...' : 'Unblock'}
                             </Button>
                           </td>
                         </tr>
