@@ -10,13 +10,36 @@ interface LockoutInfo {
   remainingMinutes: number;
 }
 
+// Client-side rate limiter using a sliding window
+const loginAttempts: { timestamp: number }[] = [];
+const RATE_LIMIT_WINDOW_MS = 60_000; // 1 minute
+const RATE_LIMIT_MAX_ATTEMPTS = 5; // max 5 attempts per minute
+
+const isRateLimited = (): { limited: boolean; waitSeconds: number } => {
+  const now = Date.now();
+  // Remove expired entries
+  while (loginAttempts.length > 0 && now - loginAttempts[0].timestamp > RATE_LIMIT_WINDOW_MS) {
+    loginAttempts.shift();
+  }
+  if (loginAttempts.length >= RATE_LIMIT_MAX_ATTEMPTS) {
+    const oldestInWindow = loginAttempts[0].timestamp;
+    const waitMs = RATE_LIMIT_WINDOW_MS - (now - oldestInWindow);
+    return { limited: true, waitSeconds: Math.ceil(waitMs / 1000) };
+  }
+  return { limited: false, waitSeconds: 0 };
+};
+
+const recordAttempt = () => {
+  loginAttempts.push({ timestamp: Date.now() });
+};
+
 interface AuthContextType {
   user: User | null;
   session: Session | null;
   loading: boolean;
   isAdmin: boolean;
   signUp: (email: string, password: string, firstName: string, lastName: string) => Promise<{ error: any }>;
-  signIn: (email: string, password: string) => Promise<{ error: any; locked?: boolean; lockoutInfo?: LockoutInfo }>;
+  signIn: (email: string, password: string) => Promise<{ error: any; locked?: boolean; rateLimited?: boolean; lockoutInfo?: LockoutInfo }>;
   signOut: () => Promise<void>;
   checkAccountLockout: (email: string) => Promise<LockoutInfo>;
 }
@@ -189,8 +212,20 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     }
   };
 
-  const signIn = async (email: string, password: string): Promise<{ error: any; locked?: boolean; lockoutInfo?: LockoutInfo }> => {
-    // First check if account is locked
+  const signIn = async (email: string, password: string): Promise<{ error: any; locked?: boolean; rateLimited?: boolean; lockoutInfo?: LockoutInfo }> => {
+    // Client-side rate limiting
+    const rateCheck = isRateLimited();
+    if (rateCheck.limited) {
+      toast({
+        variant: "destructive",
+        title: "Too many attempts",
+        description: `Please wait ${rateCheck.waitSeconds} seconds before trying again.`,
+      });
+      return { error: { message: 'Rate limited' }, rateLimited: true };
+    }
+    recordAttempt();
+
+    // Check if account is locked
     const lockoutInfo = await checkAccountLockout(email);
     
     if (lockoutInfo.isLocked) {

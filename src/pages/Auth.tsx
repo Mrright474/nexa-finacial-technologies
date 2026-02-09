@@ -58,8 +58,8 @@ export default function Auth() {
       }
     } else {
       const result = await signIn(email, password);
-      if (result.locked) {
-        // Account is locked - show detailed message
+      if (result.locked || result.rateLimited) {
+        // Account is locked or rate limited - show detailed message
         setIsSubmitting(false);
         return;
       }
