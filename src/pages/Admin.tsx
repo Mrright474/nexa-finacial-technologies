@@ -138,6 +138,15 @@ interface BlockedIpData {
   updated_at: string;
 }
 
+interface FailedLoginAttemptData {
+  id: string;
+  email: string;
+  ip_address: string | null;
+  location: string | null;
+  user_agent: string | null;
+  created_at: string;
+}
+
 const stats = [
   { label: 'Total Users', value: '0', icon: Users, color: 'from-blue-500 to-cyan-500' },
   { label: 'Active Cards', value: '0', icon: CreditCard, color: 'from-purple-500 to-pink-500' },
@@ -177,6 +186,7 @@ export default function Admin() {
   const [auditLogs, setAuditLogs] = useState<AuditLogData[]>([]);
   const [lockedAccounts, setLockedAccounts] = useState<LockedAccountData[]>([]);
   const [blockedIps, setBlockedIps] = useState<BlockedIpData[]>([]);
+  const [failedLoginAttempts, setFailedLoginAttempts] = useState<FailedLoginAttemptData[]>([]);
   const [statsData, setStatsData] = useState(stats);
   const [loadingData, setLoadingData] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
@@ -271,7 +281,7 @@ export default function Admin() {
     setLoadingData(true);
     
     // Fetch all data in parallel
-    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes, loginActivityRes, sessionsRes, auditLogsRes, lockedAccountsRes, blockedIpsRes] = await Promise.all([
+    const [profilesRes, kycRes, walletsRes, transactionsRes, cardsRes, rolesRes, loginActivityRes, sessionsRes, auditLogsRes, lockedAccountsRes, blockedIpsRes, failedLoginsRes] = await Promise.all([
       supabase.from('profiles').select('*').order('created_at', { ascending: false }),
       supabase.from('kyc_documents').select('*').order('created_at', { ascending: false }),
       supabase.from('wallets').select('*').order('created_at', { ascending: false }),
@@ -283,6 +293,7 @@ export default function Admin() {
       supabase.from('audit_logs').select('*').order('created_at', { ascending: false }).limit(200),
       supabase.from('account_lockouts').select('*').order('locked_until', { ascending: false }),
       supabase.from('ip_blocklist').select('*').order('blocked_until', { ascending: false }),
+      supabase.from('failed_login_attempts').select('*').order('created_at', { ascending: false }).limit(200),
     ]);
 
     if (profilesRes.data) setProfiles(profilesRes.data as Profile[]);
@@ -296,6 +307,7 @@ export default function Admin() {
     if (auditLogsRes.data) setAuditLogs(auditLogsRes.data as AuditLogData[]);
     if (lockedAccountsRes.data) setLockedAccounts(lockedAccountsRes.data as LockedAccountData[]);
     if (blockedIpsRes.data) setBlockedIps(blockedIpsRes.data as BlockedIpData[]);
+    if (failedLoginsRes.data) setFailedLoginAttempts(failedLoginsRes.data as FailedLoginAttemptData[]);
 
     // Calculate stats
     const profilesData = profilesRes.data || [];
@@ -992,7 +1004,7 @@ export default function Admin() {
         <TabsContent value="security">
           <div className="space-y-6">
             {/* Security Stats */}
-            <div className="grid sm:grid-cols-3 lg:grid-cols-6 gap-4">
+            <div className="grid sm:grid-cols-3 lg:grid-cols-7 gap-4">
               <div className="glass-card p-4">
                 <div className="flex items-center gap-3">
                   <div className="p-2 rounded-lg bg-primary/20">
@@ -1056,6 +1068,17 @@ export default function Admin() {
                   <div>
                     <p className="text-sm text-muted-foreground">Blocked IPs</p>
                     <p className="text-2xl font-bold">{getActiveBlockedIps().length}</p>
+                  </div>
+                </div>
+              </div>
+              <div className="glass-card p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-500/20">
+                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div>
+                    <p className="text-sm text-muted-foreground">Failed Logins</p>
+                    <p className="text-2xl font-bold">{failedLoginAttempts.length}</p>
                   </div>
                 </div>
               </div>
@@ -1214,6 +1237,82 @@ export default function Admin() {
                 </div>
               </div>
             )}
+
+            {/* Failed Login Attempts History */}
+            <div className="glass-card p-6">
+              <div className="flex items-center justify-between mb-6">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-500/20">
+                    <AlertTriangle className="w-5 h-5 text-red-500" />
+                  </div>
+                  <div>
+                    <h3 className="text-lg font-semibold text-foreground">Failed Login Attempts</h3>
+                    <p className="text-sm text-muted-foreground">History of all failed login attempts across the platform</p>
+                  </div>
+                </div>
+                <span className="px-3 py-1.5 rounded-full text-xs font-medium bg-red-500/10 text-red-500">
+                  {failedLoginAttempts.length} total
+                </span>
+              </div>
+
+              <div className="overflow-x-auto">
+                <table className="w-full">
+                  <thead>
+                    <tr className="border-b border-border">
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Email</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">IP Address</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Location</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">User Agent</th>
+                      <th className="text-left p-3 text-sm font-medium text-muted-foreground">Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {failedLoginAttempts
+                      .filter(attempt => {
+                        if (!securitySearchTerm) return true;
+                        return attempt.email.toLowerCase().includes(securitySearchTerm.toLowerCase()) ||
+                          (attempt.ip_address || '').toLowerCase().includes(securitySearchTerm.toLowerCase());
+                      })
+                      .slice(0, 100)
+                      .map((attempt) => (
+                        <tr key={attempt.id} className="border-b border-border/50 hover:bg-secondary/30">
+                          <td className="p-3">
+                            <div className="flex items-center gap-2">
+                              <div className="w-8 h-8 rounded-full bg-red-500/20 flex items-center justify-center">
+                                <UserX className="w-4 h-4 text-red-500" />
+                              </div>
+                              <span className="font-medium text-foreground text-sm">{attempt.email}</span>
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground font-mono">
+                              <MapPin className="w-3 h-3" />
+                              {attempt.ip_address || 'Unknown'}
+                            </div>
+                          </td>
+                          <td className="p-3">
+                            <span className="text-sm text-muted-foreground">{attempt.location || 'Unknown'}</span>
+                          </td>
+                          <td className="p-3">
+                            <span className="text-sm text-muted-foreground truncate max-w-xs block">
+                              {attempt.user_agent?.slice(0, 60) || 'Unknown'}{(attempt.user_agent?.length || 0) > 60 ? '...' : ''}
+                            </span>
+                          </td>
+                          <td className="p-3">
+                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                              <Clock className="w-3 h-3" />
+                              {new Date(attempt.created_at).toLocaleString()}
+                            </div>
+                          </td>
+                        </tr>
+                      ))}
+                  </tbody>
+                </table>
+                {failedLoginAttempts.length === 0 && (
+                  <p className="text-center text-muted-foreground py-8">No failed login attempts recorded</p>
+                )}
+              </div>
+            </div>
 
             {/* Login Activity Table */}
             <div className="glass-card p-6">
