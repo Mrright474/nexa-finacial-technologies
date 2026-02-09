@@ -133,6 +133,7 @@ interface BlockedIpData {
   blocked_until: string;
   failed_attempts: number;
   reason: string | null;
+  location: string | null;
   created_at: string;
   updated_at: string;
 }
@@ -1157,9 +1158,9 @@ export default function Admin() {
                     <thead>
                       <tr className="border-b border-border">
                         <th className="text-left p-3 text-sm font-medium text-muted-foreground">IP Address</th>
+                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Location</th>
                         <th className="text-left p-3 text-sm font-medium text-muted-foreground">Reason</th>
                         <th className="text-left p-3 text-sm font-medium text-muted-foreground">Failed Attempts</th>
-                        <th className="text-left p-3 text-sm font-medium text-muted-foreground">Blocked Until</th>
                         <th className="text-left p-3 text-sm font-medium text-muted-foreground">Time Remaining</th>
                         <th className="text-left p-3 text-sm font-medium text-muted-foreground">Actions</th>
                       </tr>
@@ -1176,18 +1177,18 @@ export default function Admin() {
                             </div>
                           </td>
                           <td className="p-3">
+                            <div className="flex items-center gap-1.5 text-sm">
+                              <MapPin className="w-3.5 h-3.5 text-orange-400" />
+                              <span className="text-foreground">{blockedIp.location || 'Unknown'}</span>
+                            </div>
+                          </td>
+                          <td className="p-3">
                             <span className="text-sm text-muted-foreground">{blockedIp.reason || 'Excessive failed login attempts'}</span>
                           </td>
                           <td className="p-3">
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-orange-500/20 text-orange-500">
                               {blockedIp.failed_attempts} attempts
                             </span>
-                          </td>
-                          <td className="p-3">
-                            <div className="flex items-center gap-1 text-sm text-muted-foreground">
-                              <Clock className="w-3 h-3" />
-                              {new Date(blockedIp.blocked_until).toLocaleString()}
-                            </div>
                           </td>
                           <td className="p-3">
                             <span className="px-2 py-1 rounded-full text-xs font-medium bg-warning/20 text-warning">

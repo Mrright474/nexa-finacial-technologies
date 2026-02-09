@@ -189,9 +189,24 @@ Deno.serve(async (req) => {
       
       console.log('Failed login recorded:', result);
 
-      // Also check IP-based blocking
+    // Also check IP-based blocking
       let ipBlocked = false;
       if (ipAddress) {
+        // Fetch geolocation for the IP
+        let geoLocation: string | null = null;
+        try {
+          const geoRes = await fetch(`http://ip-api.com/json/${ipAddress}?fields=status,country,regionName,city,isp`);
+          if (geoRes.ok) {
+            const geo = await geoRes.json();
+            if (geo.status === 'success') {
+              geoLocation = [geo.city, geo.regionName, geo.country].filter(Boolean).join(', ');
+              console.log(`IP ${ipAddress} geolocated to: ${geoLocation} (ISP: ${geo.isp})`);
+            }
+          }
+        } catch (geoErr) {
+          console.error('Geolocation lookup failed:', geoErr);
+        }
+
         const { data: ipData, error: ipError } = await supabase.rpc('record_ip_failure', {
           p_ip_address: ipAddress,
           p_email: email.toLowerCase()
@@ -200,6 +215,14 @@ Deno.serve(async (req) => {
         if (!ipError && ipData?.[0]?.should_block) {
           ipBlocked = true;
           console.log(`IP ${ipAddress} has been blocked after ${ipData[0].attempt_count} failed attempts targeting ${ipData[0].unique_emails} accounts`);
+          
+          // Store location on the blocked IP record
+          if (geoLocation) {
+            await supabase
+              .from('ip_blocklist')
+              .update({ location: geoLocation })
+              .eq('ip_address', ipAddress);
+          }
           
           // Send IP block notification to admin (could be enhanced)
           try {
