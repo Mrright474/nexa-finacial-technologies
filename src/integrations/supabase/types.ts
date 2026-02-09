@@ -150,6 +150,7 @@ export type Database = {
           failed_attempts: number
           id: string
           ip_address: string
+          location: string | null
           reason: string | null
           updated_at: string
         }
@@ -159,6 +160,7 @@ export type Database = {
           failed_attempts?: number
           id?: string
           ip_address: string
+          location?: string | null
           reason?: string | null
           updated_at?: string
         }
@@ -168,6 +170,7 @@ export type Database = {
           failed_attempts?: number
           id?: string
           ip_address?: string
+          location?: string | null
           reason?: string | null
           updated_at?: string
         }
