@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Button } from '@/components/ui/button';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -26,14 +26,7 @@ export function KycUpload() {
   const [existingDocs, setExistingDocs] = useState<any[]>([]);
   const [loadingDocs, setLoadingDocs] = useState(true);
 
-  // Fetch existing documents on mount
-  useState(() => {
-    if (user) {
-      fetchExistingDocs();
-    }
-  });
-
-  const fetchExistingDocs = async () => {
+  const fetchExistingDocs = useCallback(async () => {
     if (!user) return;
     
     const { data } = await supabase
@@ -45,7 +38,14 @@ export function KycUpload() {
       setExistingDocs(data);
     }
     setLoadingDocs(false);
-  };
+  }, [user]);
+
+  // Fetch existing documents on mount
+  useEffect(() => {
+    if (user) {
+      fetchExistingDocs();
+    }
+  }, [user, fetchExistingDocs]);
 
   const handleFileUpload = async (docType: 'id_front' | 'id_back' | 'selfie', file: File) => {
     if (!user) return;
