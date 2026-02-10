@@ -147,6 +147,8 @@ interface FailedLoginAttemptData {
   created_at: string;
 }
 
+const FAILED_LOGINS_PER_PAGE = 20;
+
 const stats = [
   { label: 'Total Users', value: '0', icon: Users, color: 'from-blue-500 to-cyan-500' },
   { label: 'Active Cards', value: '0', icon: CreditCard, color: 'from-purple-500 to-pink-500' },
@@ -199,7 +201,7 @@ export default function Admin() {
   const [unlockingAccount, setUnlockingAccount] = useState<string | null>(null);
   const [unblockingIp, setUnblockingIp] = useState<string | null>(null);
   const [failedLoginsPage, setFailedLoginsPage] = useState(1);
-  const FAILED_LOGINS_PER_PAGE = 20;
+
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
