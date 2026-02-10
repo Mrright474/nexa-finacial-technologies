@@ -198,6 +198,8 @@ export default function Admin() {
   const [terminatingUser, setTerminatingUser] = useState<string | null>(null);
   const [unlockingAccount, setUnlockingAccount] = useState<string | null>(null);
   const [unblockingIp, setUnblockingIp] = useState<string | null>(null);
+  const [failedLoginsPage, setFailedLoginsPage] = useState(1);
+  const FAILED_LOGINS_PER_PAGE = 20;
   
   // Confirmation dialog state
   const [confirmDialog, setConfirmDialog] = useState<{
@@ -1267,14 +1269,16 @@ export default function Admin() {
                     </tr>
                   </thead>
                   <tbody>
-                    {failedLoginAttempts
-                      .filter(attempt => {
+                    {(() => {
+                      const filtered = failedLoginAttempts.filter(attempt => {
                         if (!securitySearchTerm) return true;
                         return attempt.email.toLowerCase().includes(securitySearchTerm.toLowerCase()) ||
                           (attempt.ip_address || '').toLowerCase().includes(securitySearchTerm.toLowerCase());
-                      })
-                      .slice(0, 100)
-                      .map((attempt) => (
+                      });
+                      const totalPages = Math.ceil(filtered.length / FAILED_LOGINS_PER_PAGE);
+                      const currentPage = Math.min(failedLoginsPage, totalPages || 1);
+                      const start = (currentPage - 1) * FAILED_LOGINS_PER_PAGE;
+                      return filtered.slice(start, start + FAILED_LOGINS_PER_PAGE).map((attempt) => (
                         <tr key={attempt.id} className="border-b border-border/50 hover:bg-secondary/30">
                           <td className="p-3">
                             <div className="flex items-center gap-2">
@@ -1305,12 +1309,71 @@ export default function Admin() {
                             </div>
                           </td>
                         </tr>
-                      ))}
+                      ));
+                    })()}
                   </tbody>
                 </table>
                 {failedLoginAttempts.length === 0 && (
                   <p className="text-center text-muted-foreground py-8">No failed login attempts recorded</p>
                 )}
+                {(() => {
+                  const filtered = failedLoginAttempts.filter(attempt => {
+                    if (!securitySearchTerm) return true;
+                    return attempt.email.toLowerCase().includes(securitySearchTerm.toLowerCase()) ||
+                      (attempt.ip_address || '').toLowerCase().includes(securitySearchTerm.toLowerCase());
+                  });
+                  const totalPages = Math.ceil(filtered.length / FAILED_LOGINS_PER_PAGE);
+                  if (totalPages <= 1) return null;
+                  const currentPage = Math.min(failedLoginsPage, totalPages);
+                  return (
+                    <div className="flex items-center justify-between mt-4 pt-4 border-t border-border">
+                      <p className="text-sm text-muted-foreground">
+                        Showing {((currentPage - 1) * FAILED_LOGINS_PER_PAGE) + 1}–{Math.min(currentPage * FAILED_LOGINS_PER_PAGE, filtered.length)} of {filtered.length}
+                      </p>
+                      <div className="flex items-center gap-2">
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage <= 1}
+                          onClick={() => setFailedLoginsPage(p => Math.max(1, p - 1))}
+                        >
+                          Previous
+                        </Button>
+                        {Array.from({ length: Math.min(totalPages, 5) }, (_, i) => {
+                          let page: number;
+                          if (totalPages <= 5) {
+                            page = i + 1;
+                          } else if (currentPage <= 3) {
+                            page = i + 1;
+                          } else if (currentPage >= totalPages - 2) {
+                            page = totalPages - 4 + i;
+                          } else {
+                            page = currentPage - 2 + i;
+                          }
+                          return (
+                            <Button
+                              key={page}
+                              variant={page === currentPage ? "default" : "outline"}
+                              size="sm"
+                              className="w-9"
+                              onClick={() => setFailedLoginsPage(page)}
+                            >
+                              {page}
+                            </Button>
+                          );
+                        })}
+                        <Button
+                          variant="outline"
+                          size="sm"
+                          disabled={currentPage >= totalPages}
+                          onClick={() => setFailedLoginsPage(p => Math.min(totalPages, p + 1))}
+                        >
+                          Next
+                        </Button>
+                      </div>
+                    </div>
+                  );
+                })()}
               </div>
             </div>
 
@@ -1333,7 +1396,7 @@ export default function Admin() {
                     placeholder="Search by email..." 
                     className="pl-9 w-64" 
                     value={securitySearchTerm}
-                    onChange={(e) => setSecuritySearchTerm(e.target.value)}
+                    onChange={(e) => { setSecuritySearchTerm(e.target.value); setFailedLoginsPage(1); }}
                   />
                 </div>
               </div>
