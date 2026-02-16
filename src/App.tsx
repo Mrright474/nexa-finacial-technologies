@@ -12,6 +12,8 @@ import Wallet from "./pages/Wallet";
 import Cards from "./pages/Cards";
 import Crypto from "./pages/Crypto";
 import Transfers from "./pages/Transfers";
+import Trading from "./pages/Trading";
+import BillPayments from "./pages/BillPayments";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import NotFound from "./pages/NotFound";
@@ -34,6 +36,8 @@ const App = () => (
               <Route path="/cards" element={<Cards />} />
               <Route path="/crypto" element={<Crypto />} />
               <Route path="/transfers" element={<Transfers />} />
+              <Route path="/trading" element={<Trading />} />
+              <Route path="/bills" element={<BillPayments />} />
               <Route path="/admin" element={<Admin />} />
               <Route path="/profile" element={<Profile />} />
               <Route path="*" element={<NotFound />} />
