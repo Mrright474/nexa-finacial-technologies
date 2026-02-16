@@ -1,17 +1,19 @@
-import { Button } from '@/components/ui/button';
-import { Send, Download, ArrowLeftRight, QrCode, CreditCard, Smartphone } from 'lucide-react';
+import { Send, Download, ArrowLeftRight, BarChart3, CreditCard, Smartphone, Receipt, TrendingUp } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { useNavigate } from 'react-router-dom';
 
 const actions = [
-  { icon: Send, label: 'Send', gradient: 'from-blue-500 to-cyan-500' },
-  { icon: Download, label: 'Receive', gradient: 'from-green-500 to-emerald-500' },
-  { icon: ArrowLeftRight, label: 'Exchange', gradient: 'from-purple-500 to-pink-500' },
-  { icon: QrCode, label: 'Pay', gradient: 'from-orange-500 to-red-500' },
-  { icon: CreditCard, label: 'Card', gradient: 'from-slate-500 to-zinc-500' },
-  { icon: Smartphone, label: 'Mobile', gradient: 'from-amber-500 to-yellow-500' },
+  { icon: Send, label: 'Send', gradient: 'from-blue-500 to-cyan-500', path: '/transfers' },
+  { icon: Download, label: 'Receive', gradient: 'from-green-500 to-emerald-500', path: '/wallet' },
+  { icon: ArrowLeftRight, label: 'Exchange', gradient: 'from-purple-500 to-pink-500', path: '/crypto' },
+  { icon: BarChart3, label: 'Trade', gradient: 'from-orange-500 to-red-500', path: '/trading' },
+  { icon: Receipt, label: 'Bills', gradient: 'from-amber-500 to-yellow-500', path: '/bills' },
+  { icon: CreditCard, label: 'Cards', gradient: 'from-slate-500 to-zinc-500', path: '/cards' },
 ];
 
 export function QuickActions() {
+  const navigate = useNavigate();
+
   return (
     <div className="glass-card p-6 animate-slide-up delay-100">
       <h3 className="text-lg font-semibold text-foreground mb-4">Quick Actions</h3>
@@ -19,6 +21,7 @@ export function QuickActions() {
         {actions.map((action) => (
           <button
             key={action.label}
+            onClick={() => navigate(action.path)}
             className="flex flex-col items-center gap-2 p-4 rounded-xl hover:bg-secondary/50 transition-all group"
           >
             <div
