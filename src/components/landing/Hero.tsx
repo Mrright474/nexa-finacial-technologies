@@ -5,12 +5,19 @@ import { Link } from 'react-router-dom';
 import { NexaCard } from '@/components/cards/NexaCard';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import demoVideo from '@/assets/demo-video.mp4';
+import heroImage from '@/assets/hero-fintech.jpg';
 
 export function Hero() {
   const [showDemo, setShowDemo] = useState(false);
 
   return (
     <section className="relative min-h-screen flex items-center pt-16 overflow-hidden">
+      {/* Background Image */}
+      <div className="absolute inset-0">
+        <img src={heroImage} alt="" className="w-full h-full object-cover opacity-20" />
+        <div className="absolute inset-0 bg-gradient-to-b from-background via-background/80 to-background" />
+      </div>
+
       {/* Background Effects */}
       <div className="absolute inset-0 bg-gradient-radial from-primary/10 via-transparent to-transparent" />
       <div className="absolute top-1/4 -left-1/4 w-1/2 h-1/2 bg-primary/20 rounded-full blur-[120px]" />

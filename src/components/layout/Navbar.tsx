@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Wallet, CreditCard, ArrowLeftRight, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, PiggyBank } from 'lucide-react';
+import { Menu, X, Wallet, CreditCard, ArrowLeftRight, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, PiggyBank, Bell } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ export function Navbar() {
   const { packageType, setPackageType, userName } = useApp();
 
   const isLanding = location.pathname === '/';
-  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings');
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings') || location.pathname.startsWith('/notifications');
 
   const navLinks = [
     { href: '#features', label: 'Features' },
@@ -129,6 +129,13 @@ export function Navbar() {
                   </Button>
                 </Link>
               )}
+
+              <Link to="/notifications">
+                <Button variant="ghost" size="icon" className="relative">
+                  <Bell className="w-5 h-5" />
+                  <span className="absolute top-1 right-1 w-2 h-2 bg-destructive rounded-full" />
+                </Button>
+              </Link>
               
               <Button variant="ghost" size="icon" onClick={handleSignOut}>
                 <LogOut className="w-5 h-5" />

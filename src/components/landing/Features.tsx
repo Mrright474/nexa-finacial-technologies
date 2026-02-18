@@ -1,5 +1,7 @@
 import { Wallet, CreditCard, ArrowLeftRight, TrendingUp, Shield, Globe, Smartphone, Banknote } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import cryptoBg from '@/assets/crypto-bg.jpg';
+import securityShield from '@/assets/security-shield.jpg';
 
 const features = [
   {
@@ -25,6 +27,7 @@ const features = [
     title: 'Crypto & Forex Trading',
     description: 'Trade 50+ cryptocurrencies and major forex pairs. Advanced charts and analytics included.',
     gradient: 'from-orange-500 to-red-500',
+    image: cryptoBg,
   },
   {
     icon: Banknote,
@@ -37,6 +40,7 @@ const features = [
     title: 'Bank-Grade Security',
     description: 'End-to-end encryption, biometric auth, and PCI DSS compliance. Your money is always safe.',
     gradient: 'from-slate-500 to-zinc-500',
+    image: securityShield,
   },
   {
     icon: Globe,
@@ -73,21 +77,28 @@ export function Features() {
             <div
               key={feature.title}
               className={cn(
-                'group glass-card p-6 hover:bg-white/10 transition-all duration-300 animate-slide-up',
+                'group glass-card p-6 hover:bg-white/10 transition-all duration-300 animate-slide-up overflow-hidden relative',
                 `delay-${(index + 1) * 100}`
               )}
             >
-              <div
-                className={cn(
-                  'w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4',
-                  'group-hover:scale-110 transition-transform duration-300',
-                  feature.gradient
-                )}
-              >
-                <feature.icon className="w-6 h-6 text-white" />
+              {feature.image && (
+                <div className="absolute inset-0 opacity-0 group-hover:opacity-20 transition-opacity duration-500">
+                  <img src={feature.image} alt="" className="w-full h-full object-cover" loading="lazy" />
+                </div>
+              )}
+              <div className="relative">
+                <div
+                  className={cn(
+                    'w-12 h-12 rounded-xl bg-gradient-to-br flex items-center justify-center mb-4',
+                    'group-hover:scale-110 transition-transform duration-300',
+                    feature.gradient
+                  )}
+                >
+                  <feature.icon className="w-6 h-6 text-white" />
+                </div>
+                <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
+                <p className="text-sm text-muted-foreground">{feature.description}</p>
               </div>
-              <h3 className="text-lg font-semibold text-foreground mb-2">{feature.title}</h3>
-              <p className="text-sm text-muted-foreground">{feature.description}</p>
             </div>
           ))}
         </div>

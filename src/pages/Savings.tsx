@@ -13,6 +13,7 @@ import {
   PiggyBank, Calendar, DollarSign, BarChart3
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { toast } from 'sonner';
 
 // ── Demo Data ──────────────────────────────────────────────────────────────────
 
@@ -129,7 +130,7 @@ export default function Savings() {
                   </div>
                 </div>
                 <div className="flex gap-2">
-                  <Button variant="gradient" size="sm">Create Goal</Button>
+                  <Button variant="gradient" size="sm" onClick={() => { toast.success('Savings goal created!'); setShowNewGoal(false); }}>Create Goal</Button>
                   <Button variant="ghost" size="sm" onClick={() => setShowNewGoal(false)}>Cancel</Button>
                 </div>
               </div>
@@ -170,8 +171,8 @@ export default function Savings() {
                       </div>
                     </div>
                     <div className="flex gap-2 mt-4 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <Button variant="secondary" size="sm" className="flex-1 gap-1"><Plus className="w-3 h-3" /> Add</Button>
-                      <Button variant="ghost" size="sm" className="gap-1"><Settings className="w-3 h-3" /></Button>
+                      <Button variant="secondary" size="sm" className="flex-1 gap-1" onClick={() => toast.success(`Added funds to ${goal.name}`)}><Plus className="w-3 h-3" /> Add</Button>
+                      <Button variant="ghost" size="sm" className="gap-1" onClick={() => toast.info('Goal settings coming soon')}><Settings className="w-3 h-3" /></Button>
                     </div>
                   </div>
                 );
@@ -183,7 +184,7 @@ export default function Savings() {
           <TabsContent value="fixed" className="space-y-6">
             <div className="flex items-center justify-between">
               <h2 className="text-xl font-semibold text-foreground">Fixed Deposits</h2>
-              <Button variant="gradient" size="sm" className="gap-2"><Plus className="w-4 h-4" /> New Deposit</Button>
+              <Button variant="gradient" size="sm" className="gap-2" onClick={() => toast.success('New fixed deposit created!')}><Plus className="w-4 h-4" /> New Deposit</Button>
             </div>
             <div className="space-y-4">
               {fixedDeposits.map((fd) => (
@@ -243,8 +244,8 @@ export default function Savings() {
                     <span>TVL: ${pool.tvl}</span>
                   </div>
                   <div className="flex gap-2">
-                    <Button variant="gradient" size="sm" className="flex-1">Stake More</Button>
-                    <Button variant="secondary" size="sm" className="flex-1">Unstake</Button>
+                    <Button variant="gradient" size="sm" className="flex-1" onClick={() => toast.success(`Staked more ${pool.token}`)}>Stake More</Button>
+                    <Button variant="secondary" size="sm" className="flex-1" onClick={() => toast.success(`Unstaked ${pool.token}`)}>Unstake</Button>
                   </div>
                 </div>
               ))}
@@ -284,8 +285,8 @@ export default function Savings() {
                       <span className={cn('px-2 py-0.5 rounded-full', farm.risk === 'Low' ? 'bg-success/20 text-success' : farm.risk === 'Medium' ? 'bg-warning/20 text-warning' : 'bg-destructive/20 text-destructive')}>{farm.risk} Risk</span>
                     </div>
                     <div className="flex gap-2">
-                      <Button variant="gradient" size="sm" className="flex-1">Deposit</Button>
-                      <Button variant="secondary" size="sm" className="flex-1">Harvest</Button>
+                      <Button variant="gradient" size="sm" className="flex-1" onClick={() => toast.success(`Deposited to ${farm.pair} farm`)}>Deposit</Button>
+                      <Button variant="secondary" size="sm" className="flex-1" onClick={() => toast.success(`Harvested ${farm.rewards} rewards`)}>Harvest</Button>
                     </div>
                   </div>
                 ))}
@@ -314,8 +315,8 @@ export default function Savings() {
                     </div>
                     <p className="text-xs text-muted-foreground mb-4">24h Volume: ${lp.volume24h}</p>
                     <div className="flex gap-2">
-                      <Button variant="gradient" size="sm" className="flex-1">Add Liquidity</Button>
-                      <Button variant="secondary" size="sm" className="flex-1">Remove</Button>
+                      <Button variant="gradient" size="sm" className="flex-1" onClick={() => toast.success(`Added liquidity to ${lp.pair}`)}>Add Liquidity</Button>
+                      <Button variant="secondary" size="sm" className="flex-1" onClick={() => toast.success(`Removed liquidity from ${lp.pair}`)}>Remove</Button>
                     </div>
                   </div>
                 ))}
