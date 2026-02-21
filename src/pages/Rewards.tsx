@@ -1,35 +1,21 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Navbar } from '@/components/layout/Navbar';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Badge } from '@/components/ui/badge';
 import { Progress } from '@/components/ui/progress';
-import { Gift, Users, Star, Copy, Trophy, Zap, ShieldCheck, ArrowRight, CheckCircle2 } from 'lucide-react';
+import { Gift, Users, Star, Copy, Trophy, Zap, ShieldCheck, ArrowRight, CheckCircle2, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import { cn } from '@/lib/utils';
+import { supabase } from '@/integrations/supabase/client';
+import { useAuth } from '@/hooks/useAuth';
 
-const referralCode = 'NEXA-7K2X9';
-
-const pointsHistory = [
-  { id: '1', action: 'Friend signed up', points: 500, date: '2026-02-20', type: 'earned' as const },
-  { id: '2', action: 'First deposit bonus', points: 250, date: '2026-02-18', type: 'earned' as const },
-  { id: '3', action: 'Redeemed cashback', points: -1000, date: '2026-02-15', type: 'redeemed' as const },
-  { id: '4', action: 'Monthly trading bonus', points: 300, date: '2026-02-10', type: 'earned' as const },
-  { id: '5', action: 'Completed KYC', points: 200, date: '2026-02-05', type: 'earned' as const },
-];
-
-const rewards = [
+const availableRewards = [
   { id: '1', name: '0.5% Cashback', description: 'Get 0.5% cashback on your next 5 transactions', cost: 500, icon: Zap, gradient: 'from-amber-500 to-orange-500' },
   { id: '2', name: 'Free Transfer', description: 'One free international transfer up to $500', cost: 750, icon: ArrowRight, gradient: 'from-blue-500 to-cyan-500' },
   { id: '3', name: 'Premium 1 Month', description: 'Unlock premium features for 1 month', cost: 2000, icon: Star, gradient: 'from-purple-500 to-pink-500' },
   { id: '4', name: 'Priority Support', description: '24/7 priority customer support for 30 days', cost: 1000, icon: ShieldCheck, gradient: 'from-emerald-500 to-teal-500' },
-];
-
-const referrals = [
-  { id: '1', name: 'Alice M.', status: 'active', joined: '2026-02-19', earned: 500 },
-  { id: '2', name: 'James K.', status: 'pending', joined: '2026-02-21', earned: 0 },
-  { id: '3', name: 'Sarah L.', status: 'active', joined: '2026-01-30', earned: 500 },
 ];
 
 const challenges = [
@@ -40,21 +26,83 @@ const challenges = [
 ];
 
 export default function Rewards() {
-  const [totalPoints] = useState(1250);
+  const { user } = useAuth();
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [pointsHistory, setPointsHistory] = useState<any[]>([]);
+  const [referrals, setReferrals] = useState<any[]>([]);
+  const [referralCode, setReferralCode] = useState('');
+  const [loading, setLoading] = useState(true);
+
   const tierProgress = (totalPoints / 5000) * 100;
+
+  useEffect(() => {
+    if (user) fetchAll();
+  }, [user]);
+
+  const fetchAll = async () => {
+    setLoading(true);
+    const [pointsRes, historyRes, referralsRes, profileRes] = await Promise.all([
+      supabase.rpc('get_user_points', { p_user_id: user!.id }),
+      supabase.from('points_ledger').select('*').eq('user_id', user!.id).order('created_at', { ascending: false }).limit(20),
+      supabase.from('referrals').select('*').eq('referrer_id', user!.id).order('created_at', { ascending: false }),
+      supabase.from('profiles').select('referral_code').eq('user_id', user!.id).single(),
+    ]);
+
+    if (pointsRes.data !== null) setTotalPoints(pointsRes.data as number);
+    if (historyRes.data) setPointsHistory(historyRes.data);
+    if (referralsRes.data) setReferrals(referralsRes.data);
+    if (profileRes.data?.referral_code) {
+      setReferralCode(profileRes.data.referral_code);
+    } else {
+      // Generate code for existing profiles
+      const code = 'NEXA-' + Math.random().toString(36).substring(2, 7).toUpperCase();
+      await supabase.from('profiles').update({ referral_code: code } as any).eq('user_id', user!.id);
+      setReferralCode(code);
+    }
+    setLoading(false);
+  };
 
   const copyReferralCode = () => {
     navigator.clipboard.writeText(referralCode);
     toast.success('Referral code copied!');
   };
 
-  const redeemReward = (reward: typeof rewards[0]) => {
+  const redeemReward = async (reward: typeof availableRewards[0]) => {
     if (totalPoints < reward.cost) {
       toast.error('Not enough points');
       return;
     }
+    // Insert redemption record
+    const { error: redeemErr } = await supabase.from('redeemed_rewards').insert({
+      user_id: user!.id,
+      reward_name: reward.name,
+      points_cost: reward.cost,
+    } as any);
+    if (redeemErr) { toast.error('Redemption failed'); return; }
+
+    // Deduct points
+    const { error: ledgerErr } = await supabase.from('points_ledger').insert({
+      user_id: user!.id,
+      action: `Redeemed: ${reward.name}`,
+      points: reward.cost,
+      type: 'redeemed',
+    } as any);
+    if (ledgerErr) { toast.error('Failed to record points'); return; }
+
     toast.success(`Redeemed: ${reward.name}`);
+    fetchAll();
   };
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-background">
+        <Navbar />
+        <div className="pt-20 flex items-center justify-center h-[60vh]">
+          <Loader2 className="w-8 h-8 animate-spin text-primary" />
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-background">
@@ -137,7 +185,7 @@ export default function Rewards() {
           {/* Rewards Tab */}
           <TabsContent value="rewards">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              {rewards.map((reward) => {
+              {availableRewards.map((reward) => {
                 const Icon = reward.icon;
                 const canAfford = totalPoints >= reward.cost;
                 return (
@@ -194,23 +242,27 @@ export default function Rewards() {
                 <CardDescription>Track friends you've invited</CardDescription>
               </CardHeader>
               <CardContent className="space-y-3">
-                {referrals.map((ref) => (
-                  <div key={ref.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30">
-                    <div className="flex items-center gap-3">
-                      <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
-                        <span className="text-white text-sm font-semibold">{ref.name[0]}</span>
+                {referrals.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No referrals yet. Share your code to get started!</p>
+                ) : (
+                  referrals.map((ref) => (
+                    <div key={ref.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30">
+                      <div className="flex items-center gap-3">
+                        <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center">
+                          <span className="text-white text-sm font-semibold">{(ref.referred_name || ref.referred_email)[0].toUpperCase()}</span>
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium text-foreground">{ref.referred_name || ref.referred_email}</p>
+                          <p className="text-xs text-muted-foreground">Joined {new Date(ref.created_at).toLocaleDateString()}</p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium text-foreground">{ref.name}</p>
-                        <p className="text-xs text-muted-foreground">Joined {ref.joined}</p>
+                      <div className="text-right">
+                        <Badge variant={ref.status === 'active' ? 'default' : 'secondary'} className="mb-1">{ref.status}</Badge>
+                        <p className="text-xs text-muted-foreground">+{ref.points_earned} pts</p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <Badge variant={ref.status === 'active' ? 'default' : 'secondary'} className="mb-1">{ref.status}</Badge>
-                      <p className="text-xs text-muted-foreground">+{ref.earned} pts</p>
-                    </div>
-                  </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
           </TabsContent>
@@ -222,17 +274,21 @@ export default function Rewards() {
                 <CardTitle className="text-lg">Points History</CardTitle>
               </CardHeader>
               <CardContent className="space-y-3">
-                {pointsHistory.map((item) => (
-                  <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30">
-                    <div>
-                      <p className="text-sm font-medium text-foreground">{item.action}</p>
-                      <p className="text-xs text-muted-foreground">{item.date}</p>
+                {pointsHistory.length === 0 ? (
+                  <p className="text-sm text-muted-foreground text-center py-8">No points activity yet.</p>
+                ) : (
+                  pointsHistory.map((item) => (
+                    <div key={item.id} className="flex items-center justify-between p-3 rounded-xl bg-secondary/30">
+                      <div>
+                        <p className="text-sm font-medium text-foreground">{item.action}</p>
+                        <p className="text-xs text-muted-foreground">{new Date(item.created_at).toLocaleDateString()}</p>
+                      </div>
+                      <span className={cn('text-sm font-semibold', item.type === 'earned' ? 'text-emerald-500' : 'text-destructive')}>
+                        {item.type === 'earned' ? '+' : '-'}{item.points} pts
+                      </span>
                     </div>
-                    <span className={cn('text-sm font-semibold', item.type === 'earned' ? 'text-emerald-500' : 'text-destructive')}>
-                      {item.type === 'earned' ? '+' : ''}{item.points} pts
-                    </span>
-                  </div>
-                ))}
+                  ))
+                )}
               </CardContent>
             </Card>
           </TabsContent>

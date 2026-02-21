@@ -1,4 +1,4 @@
-import { Send, Download, ArrowLeftRight, BarChart3, CreditCard, Smartphone, Receipt, TrendingUp, PiggyBank } from 'lucide-react';
+import { Send, Download, ArrowLeftRight, BarChart3, CreditCard, Smartphone, Receipt, TrendingUp, Landmark } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useNavigate } from 'react-router-dom';
 
@@ -9,7 +9,7 @@ const actions = [
   { icon: BarChart3, label: 'Trade', gradient: 'from-orange-500 to-red-500', path: '/trading' },
   { icon: Receipt, label: 'Bills', gradient: 'from-amber-500 to-yellow-500', path: '/bills' },
   { icon: CreditCard, label: 'Cards', gradient: 'from-slate-500 to-zinc-500', path: '/cards' },
-  { icon: PiggyBank, label: 'Save', gradient: 'from-teal-500 to-cyan-500', path: '/savings' },
+  { icon: Landmark, label: 'Save', gradient: 'from-teal-500 to-cyan-500', path: '/savings' },
 ];
 
 export function QuickActions() {

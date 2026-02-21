@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Wallet, CreditCard, ArrowLeftRight, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, PiggyBank, Bell, Gift } from 'lucide-react';
+import { Menu, X, Wallet, CreditCard, ArrowLeftRight, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, Landmark, Bell, Gift } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
@@ -32,7 +32,7 @@ export function Navbar() {
     { href: '/transfers', label: 'Transfers', icon: ArrowLeftRight },
     { href: '/trading', label: 'Trading', icon: BarChart3 },
     { href: '/bills', label: 'Bills', icon: Receipt },
-    { href: '/savings', label: 'Savings', icon: PiggyBank },
+    { href: '/savings', label: 'Savings', icon: Landmark },
     { href: '/rewards', label: 'Rewards', icon: Gift },
   ];
 

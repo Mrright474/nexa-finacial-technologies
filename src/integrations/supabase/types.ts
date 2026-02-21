@@ -284,6 +284,33 @@ export type Database = {
         }
         Relationships: []
       }
+      points_ledger: {
+        Row: {
+          action: string
+          created_at: string
+          id: string
+          points: number
+          type: string
+          user_id: string
+        }
+        Insert: {
+          action: string
+          created_at?: string
+          id?: string
+          points: number
+          type?: string
+          user_id: string
+        }
+        Update: {
+          action?: string
+          created_at?: string
+          id?: string
+          points?: number
+          type?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
@@ -295,6 +322,7 @@ export type Database = {
           last_name: string | null
           package_type: Database["public"]["Enums"]["package_type"] | null
           phone: string | null
+          referral_code: string | null
           updated_at: string
           user_id: string
         }
@@ -308,6 +336,7 @@ export type Database = {
           last_name?: string | null
           package_type?: Database["public"]["Enums"]["package_type"] | null
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id: string
         }
@@ -321,8 +350,63 @@ export type Database = {
           last_name?: string | null
           package_type?: Database["public"]["Enums"]["package_type"] | null
           phone?: string | null
+          referral_code?: string | null
           updated_at?: string
           user_id?: string
+        }
+        Relationships: []
+      }
+      redeemed_rewards: {
+        Row: {
+          created_at: string
+          id: string
+          points_cost: number
+          reward_name: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          points_cost: number
+          reward_name: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          points_cost?: number
+          reward_name?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
+      referrals: {
+        Row: {
+          created_at: string
+          id: string
+          points_earned: number
+          referred_email: string
+          referred_name: string | null
+          referrer_id: string
+          status: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          points_earned?: number
+          referred_email: string
+          referred_name?: string | null
+          referrer_id: string
+          status?: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          points_earned?: number
+          referred_email?: string
+          referred_name?: string | null
+          referrer_id?: string
+          status?: string
         }
         Relationships: []
       }
@@ -475,6 +559,7 @@ export type Database = {
       }
       clear_failed_attempts: { Args: { p_email: string }; Returns: undefined }
       clear_ip_block: { Args: { p_ip_address: string }; Returns: undefined }
+      get_user_points: { Args: { p_user_id: string }; Returns: number }
       has_role: {
         Args: {
           _role: Database["public"]["Enums"]["app_role"]
