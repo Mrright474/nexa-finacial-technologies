@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Wallet, CreditCard, ArrowLeftRight, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, PiggyBank, Bell } from 'lucide-react';
+import { Menu, X, Wallet, CreditCard, ArrowLeftRight, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, PiggyBank, Bell, Gift } from 'lucide-react';
 import { useAuth } from '@/hooks/useAuth';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
@@ -16,7 +16,7 @@ export function Navbar() {
   const { packageType, setPackageType, userName } = useApp();
 
   const isLanding = location.pathname === '/';
-  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings') || location.pathname.startsWith('/notifications');
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings') || location.pathname.startsWith('/rewards') || location.pathname.startsWith('/notifications');
 
   const navLinks = [
     { href: '#features', label: 'Features' },
@@ -33,6 +33,7 @@ export function Navbar() {
     { href: '/trading', label: 'Trading', icon: BarChart3 },
     { href: '/bills', label: 'Bills', icon: Receipt },
     { href: '/savings', label: 'Savings', icon: PiggyBank },
+    { href: '/rewards', label: 'Rewards', icon: Gift },
   ];
 
   const packageOptions: { id: PackageType; name: string; icon: typeof BookOpen; gradient: string }[] = [
