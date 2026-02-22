@@ -26,12 +26,14 @@ const pointsBreakdown = [
   { action: 'Refer a friend', points: 500 },
 ];
 
-const challenges = [
-  { id: '1', title: 'First Trade', description: 'Complete your first crypto trade', points: 100, progress: 100, completed: true },
-  { id: '2', title: 'Savings Starter', description: 'Create a savings goal', points: 150, progress: 100, completed: true },
-  { id: '3', title: 'Social Butterfly', description: 'Refer 5 friends', points: 1000, progress: 60, completed: false },
-  { id: '4', title: 'Power Trader', description: 'Make 20 trades this month', points: 500, progress: 35, completed: false },
-];
+interface ChallengeData {
+  id: string;
+  title: string;
+  description: string;
+  points: number;
+  progress: number;
+  completed: boolean;
+}
 
 export default function Rewards() {
   const { user } = useAuth();
@@ -40,6 +42,7 @@ export default function Rewards() {
   const [referrals, setReferrals] = useState<any[]>([]);
   const [referralCode, setReferralCode] = useState('');
   const [loading, setLoading] = useState(true);
+  const [challenges, setChallenges] = useState<ChallengeData[]>([]);
 
   const tierProgress = (totalPoints / 5000) * 100;
 
@@ -49,11 +52,13 @@ export default function Rewards() {
 
   const fetchAll = async () => {
     setLoading(true);
-    const [pointsRes, historyRes, referralsRes, profileRes] = await Promise.all([
+    const [pointsRes, historyRes, referralsRes, profileRes, txRes, kycRes] = await Promise.all([
       supabase.rpc('get_user_points', { p_user_id: user!.id }),
       supabase.from('points_ledger').select('*').eq('user_id', user!.id).order('created_at', { ascending: false }).limit(20),
       supabase.from('referrals').select('*').eq('referrer_id', user!.id).order('created_at', { ascending: false }),
-      supabase.from('profiles').select('referral_code').eq('user_id', user!.id).single(),
+      supabase.from('profiles').select('referral_code, kyc_status').eq('user_id', user!.id).single(),
+      supabase.from('transactions').select('id, transaction_type').eq('user_id', user!.id),
+      supabase.from('kyc_documents').select('id').eq('user_id', user!.id),
     ]);
 
     if (pointsRes.data !== null) setTotalPoints(pointsRes.data as number);
@@ -62,11 +67,26 @@ export default function Rewards() {
     if (profileRes.data?.referral_code) {
       setReferralCode(profileRes.data.referral_code);
     } else {
-      // Generate code for existing profiles
       const code = 'NEXA-' + Math.random().toString(36).substring(2, 7).toUpperCase();
       await supabase.from('profiles').update({ referral_code: code } as any).eq('user_id', user!.id);
       setReferralCode(code);
     }
+
+    // Build dynamic challenges from real activity
+    const txCount = txRes.data?.length || 0;
+    const tradeCount = txRes.data?.filter(t => t.transaction_type === 'send' || t.transaction_type === 'receive').length || 0;
+    const refCount = referralsRes.data?.length || 0;
+    const kycCount = kycRes.data?.length || 0;
+    const kycVerified = profileRes.data?.kyc_status === 'verified';
+
+    setChallenges([
+      { id: '1', title: 'First Transaction', description: 'Complete your first transaction', points: 10, progress: Math.min(txCount, 1) * 100, completed: txCount >= 1 },
+      { id: '2', title: 'Identity Verified', description: 'Complete KYC verification (3 docs)', points: 250, progress: kycVerified ? 100 : Math.min(Math.round((kycCount / 3) * 100), 99), completed: kycVerified },
+      { id: '3', title: 'Social Butterfly', description: 'Refer 5 friends to the platform', points: 500, progress: Math.min(Math.round((refCount / 5) * 100), 100), completed: refCount >= 5 },
+      { id: '4', title: 'Power Trader', description: 'Make 20 transfers total', points: 500, progress: Math.min(Math.round((tradeCount / 20) * 100), 100), completed: tradeCount >= 20 },
+      { id: '5', title: 'Active User', description: 'Complete 50 transactions total', points: 1000, progress: Math.min(Math.round((txCount / 50) * 100), 100), completed: txCount >= 50 },
+    ]);
+
     setLoading(false);
   };
 

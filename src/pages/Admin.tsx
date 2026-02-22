@@ -644,27 +644,27 @@ export default function Admin() {
 
         {/* Main Tabs */}
         <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid grid-cols-7 w-full max-w-4xl">
-            <TabsTrigger value="users" className="gap-2">
-              <Users className="w-4 h-4" /> Users
+           <TabsList className="w-full overflow-x-auto flex flex-nowrap">
+            <TabsTrigger value="users" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+              <Users className="w-4 h-4" /> <span className="hidden sm:inline">Users</span>
             </TabsTrigger>
-            <TabsTrigger value="wallets" className="gap-2">
-              <Wallet className="w-4 h-4" /> Wallets
+            <TabsTrigger value="wallets" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+              <Wallet className="w-4 h-4" /> <span className="hidden sm:inline">Wallets</span>
             </TabsTrigger>
-            <TabsTrigger value="transactions" className="gap-2">
-              <ArrowLeftRight className="w-4 h-4" /> Transactions
+            <TabsTrigger value="transactions" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+              <ArrowLeftRight className="w-4 h-4" /> <span className="hidden sm:inline">Transactions</span>
             </TabsTrigger>
-            <TabsTrigger value="cards" className="gap-2">
-              <CreditCard className="w-4 h-4" /> Cards
+            <TabsTrigger value="cards" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+              <CreditCard className="w-4 h-4" /> <span className="hidden sm:inline">Cards</span>
             </TabsTrigger>
-            <TabsTrigger value="kyc" className="gap-2">
-              <FileCheck className="w-4 h-4" /> KYC
+            <TabsTrigger value="kyc" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+              <FileCheck className="w-4 h-4" /> <span className="hidden sm:inline">KYC</span>
             </TabsTrigger>
-            <TabsTrigger value="security" className="gap-2">
-              <Shield className="w-4 h-4" /> Security
+            <TabsTrigger value="security" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+              <Shield className="w-4 h-4" /> <span className="hidden sm:inline">Security</span>
             </TabsTrigger>
-            <TabsTrigger value="audit" className="gap-2">
-              <ScrollText className="w-4 h-4" /> Audit
+            <TabsTrigger value="audit" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+              <ScrollText className="w-4 h-4" /> <span className="hidden sm:inline">Audit</span>
             </TabsTrigger>
           </TabsList>
 
@@ -970,44 +970,11 @@ export default function Admin() {
               </div>
             </div>
           </TabsContent>
-        </Tabs>
 
-        {/* Security Panel */}
-        <div className="glass-card p-6 mt-8 animate-slide-up delay-400">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-red-500 to-orange-500 flex items-center justify-center">
-              <Shield className="w-6 h-6 text-white" />
-            </div>
-            <div>
-              <h3 className="text-lg font-semibold text-foreground">Security Center</h3>
-              <p className="text-sm text-muted-foreground">Monitor platform security</p>
-            </div>
-          </div>
-
-          <div className="grid sm:grid-cols-4 gap-4">
-            <div className="p-4 rounded-xl bg-success/10 border border-success/20">
-              <p className="text-sm text-success font-medium">System Status</p>
-              <p className="text-2xl font-bold text-foreground mt-1">Operational</p>
-            </div>
-            <div className="p-4 rounded-xl bg-warning/10 border border-warning/20">
-              <p className="text-sm text-warning font-medium">Pending KYC</p>
-              <p className="text-2xl font-bold text-foreground mt-1">{profiles.filter(p => p.kyc_status === 'pending').length}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-primary/10 border border-primary/20">
-              <p className="text-sm text-primary font-medium">Total Users</p>
-              <p className="text-2xl font-bold text-foreground mt-1">{profiles.length}</p>
-            </div>
-            <div className="p-4 rounded-xl bg-purple-500/10 border border-purple-500/20">
-              <p className="text-sm text-purple-500 font-medium">Admin Users</p>
-              <p className="text-2xl font-bold text-foreground mt-1">{userRoles.filter(r => r.role === 'admin').length}</p>
-            </div>
-          </div>
-        </div>
-
-        {/* Security Tab */}
-        <TabsContent value="security">
-          <div className="space-y-6">
-            {/* Security Stats */}
+          {/* Security Tab */}
+          <TabsContent value="security">
+            <div className="space-y-6">
+              {/* Security Stats */}
             <div className="grid sm:grid-cols-3 lg:grid-cols-7 gap-4">
               <div className="glass-card p-4">
                 <div className="flex items-center gap-3">
@@ -1724,6 +1691,7 @@ export default function Admin() {
             </div>
           </div>
         </TabsContent>
+        </Tabs>
 
         {/* User Detail Dialog */}
         <Dialog open={userDetailOpen} onOpenChange={setUserDetailOpen}>

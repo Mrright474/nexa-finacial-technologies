@@ -70,7 +70,7 @@ export function Navbar() {
               <span className="text-xl font-bold text-foreground">NEXA</span>
             </Link>
 
-            <div className="hidden md:flex items-center gap-1">
+            <div className="hidden lg:flex items-center gap-1">
               {dashboardLinks.map((link) => (
                 <Link key={link.href} to={link.href}>
                   <Button
@@ -85,13 +85,13 @@ export function Navbar() {
               ))}
             </div>
 
-            <div className="flex items-center gap-3">
-              {/* Package Switcher (for admins or as general feature) */}
+            <div className="flex items-center gap-2 sm:gap-3">
+              {/* Package Switcher */}
               <div className="relative">
                 <button
                   onClick={() => setShowPackageMenu(!showPackageMenu)}
                   className={cn(
-                    "flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
+                    "flex items-center gap-2 px-2 sm:px-3 py-1.5 rounded-lg text-xs font-medium transition-all",
                     "bg-gradient-to-r text-white",
                     packageColors[packageType]
                   )}
@@ -124,7 +124,7 @@ export function Navbar() {
               </div>
 
               {isAdmin && (
-                <Link to="/admin">
+                <Link to="/admin" className="hidden sm:block">
                   <Button variant="ghost" size="sm" className="gap-2">
                     <Shield className="w-4 h-4" /> Admin
                   </Button>
@@ -138,19 +138,60 @@ export function Navbar() {
                 </Button>
               </Link>
               
-              <Button variant="ghost" size="icon" onClick={handleSignOut}>
+              <Button variant="ghost" size="icon" onClick={handleSignOut} className="hidden sm:flex">
                 <LogOut className="w-5 h-5" />
               </Button>
               
-              <Link to="/profile">
+              <Link to="/profile" className="hidden sm:block">
                 <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
                   <span className="text-white text-sm font-semibold">
                     {userName?.[0]?.toUpperCase() || 'U'}
                   </span>
                 </div>
               </Link>
+
+              {/* Mobile menu toggle */}
+              <button
+                className="lg:hidden p-2 text-foreground"
+                onClick={() => setIsOpen(!isOpen)}
+              >
+                {isOpen ? <X className="w-5 h-5" /> : <Menu className="w-5 h-5" />}
+              </button>
             </div>
           </div>
+
+          {/* Mobile dashboard nav */}
+          {isOpen && (
+            <div className="lg:hidden py-3 space-y-1 animate-fade-in border-t border-border/50">
+              {dashboardLinks.map((link) => (
+                <Link key={link.href} to={link.href} onClick={() => setIsOpen(false)}>
+                  <Button
+                    variant={location.pathname === link.href ? 'secondary' : 'ghost'}
+                    size="sm"
+                    className="w-full justify-start gap-2"
+                  >
+                    <link.icon className="w-4 h-4" />
+                    {link.label}
+                  </Button>
+                </Link>
+              ))}
+              {isAdmin && (
+                <Link to="/admin" onClick={() => setIsOpen(false)}>
+                  <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+                    <Shield className="w-4 h-4" /> Admin
+                  </Button>
+                </Link>
+              )}
+              <Link to="/profile" onClick={() => setIsOpen(false)}>
+                <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+                  <User className="w-4 h-4" /> Profile
+                </Button>
+              </Link>
+              <Button variant="ghost" size="sm" className="w-full justify-start gap-2" onClick={handleSignOut}>
+                <LogOut className="w-4 h-4" /> Sign Out
+              </Button>
+            </div>
+          )}
         </div>
       </nav>
     );
