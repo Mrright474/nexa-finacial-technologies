@@ -14,8 +14,16 @@ import { useAuth } from '@/hooks/useAuth';
 const availableRewards = [
   { id: '1', name: '0.5% Cashback', description: 'Get 0.5% cashback on your next 5 transactions', cost: 500, icon: Zap, gradient: 'from-amber-500 to-orange-500' },
   { id: '2', name: 'Free Transfer', description: 'One free international transfer up to $500', cost: 750, icon: ArrowRight, gradient: 'from-blue-500 to-cyan-500' },
-  { id: '3', name: 'Premium 1 Month', description: 'Unlock premium features for 1 month', cost: 2000, icon: Star, gradient: 'from-purple-500 to-pink-500' },
-  { id: '4', name: 'Priority Support', description: '24/7 priority customer support for 30 days', cost: 1000, icon: ShieldCheck, gradient: 'from-emerald-500 to-teal-500' },
+  { id: '3', name: 'Priority Support', description: '24/7 priority customer support for 30 days', cost: 1000, icon: ShieldCheck, gradient: 'from-emerald-500 to-teal-500' },
+  { id: '4', name: 'Premium 1 Month', description: 'Unlock premium features for 1 month', cost: 2000, icon: Star, gradient: 'from-purple-500 to-pink-500' },
+];
+
+const pointsBreakdown = [
+  { action: 'Sign up', points: 100 },
+  { action: 'Each transaction', points: '5–40' },
+  { action: 'Upload KYC document', points: 50 },
+  { action: 'Complete KYC verification', points: 250 },
+  { action: 'Refer a friend', points: 500 },
 ];
 
 const challenges = [
@@ -184,10 +192,26 @@ export default function Rewards() {
 
           {/* Rewards Tab */}
           <TabsContent value="rewards">
+            {/* How to earn */}
+            <Card className="glass-card border-0 mb-6">
+              <CardContent className="p-5">
+                <h3 className="font-semibold text-foreground mb-3 flex items-center gap-2"><Zap className="w-4 h-4 text-primary" /> How You Earn Points</h3>
+                <div className="grid grid-cols-2 md:grid-cols-5 gap-3">
+                  {pointsBreakdown.map((item) => (
+                    <div key={item.action} className="text-center p-3 rounded-xl bg-secondary/40">
+                      <p className="text-lg font-bold text-primary">+{item.points}</p>
+                      <p className="text-xs text-muted-foreground">{item.action}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               {availableRewards.map((reward) => {
                 const Icon = reward.icon;
                 const canAfford = totalPoints >= reward.cost;
+                const progressPct = Math.min((totalPoints / reward.cost) * 100, 100);
                 return (
                   <Card key={reward.id} className="glass-card border-0">
                     <CardContent className="p-6 flex items-start gap-4">
@@ -197,12 +221,18 @@ export default function Rewards() {
                       <div className="flex-1 min-w-0">
                         <h3 className="font-semibold text-foreground">{reward.name}</h3>
                         <p className="text-sm text-muted-foreground mb-3">{reward.description}</p>
-                        <div className="flex items-center justify-between">
-                          <span className="text-sm font-medium text-foreground">{reward.cost} pts</span>
-                          <Button size="sm" variant={canAfford ? 'gradient' : 'outline'} disabled={!canAfford} onClick={() => redeemReward(reward)}>
-                            Redeem
-                          </Button>
+                        <div className="mb-2">
+                          <div className="flex items-center justify-between text-xs mb-1">
+                            <span className="text-muted-foreground">{totalPoints.toLocaleString()} / {reward.cost.toLocaleString()} pts</span>
+                            <span className={cn("font-medium", canAfford ? "text-emerald-500" : "text-muted-foreground")}>
+                              {canAfford ? 'Ready!' : `${Math.max(reward.cost - totalPoints, 0).toLocaleString()} more needed`}
+                            </span>
+                          </div>
+                          <Progress value={progressPct} className="h-2" />
                         </div>
+                        <Button size="sm" variant={canAfford ? 'gradient' : 'outline'} disabled={!canAfford} onClick={() => redeemReward(reward)} className="w-full">
+                          {canAfford ? 'Redeem Now' : 'Keep Earning'}
+                        </Button>
                       </div>
                     </CardContent>
                   </Card>
