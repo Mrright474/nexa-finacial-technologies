@@ -1,6 +1,6 @@
 import { PackageType } from '@/types';
 import { cn } from '@/lib/utils';
-import { Wifi, CreditCard } from 'lucide-react';
+import { Wifi } from 'lucide-react';
 
 interface NexaCardProps {
   packageType: PackageType;
@@ -14,25 +14,37 @@ interface NexaCardProps {
 
 const packageConfig = {
   steward: {
-    gradient: 'from-amber-500 via-orange-500 to-yellow-600',
+    gradient: 'from-amber-700 via-yellow-600 to-amber-800',
+    shimmer: 'from-yellow-400/0 via-yellow-300/40 to-yellow-400/0',
     name: 'STEWARD',
     tagline: 'Faithful Stewardship',
-    accent: 'bg-amber-400/20',
-    textAccent: 'text-amber-200',
+    accent: 'bg-amber-300/15 border border-amber-400/20',
+    textAccent: 'text-amber-100/80',
+    holographic: 'from-yellow-400 via-orange-300 to-amber-500',
+    chipColor: 'from-yellow-200 to-yellow-400',
+    networkLogo: 'VISA',
   },
   amanah: {
-    gradient: 'from-emerald-500 via-teal-500 to-green-600',
+    gradient: 'from-emerald-800 via-teal-600 to-emerald-900',
+    shimmer: 'from-emerald-400/0 via-emerald-300/40 to-emerald-400/0',
     name: 'AMANAH',
     tagline: 'Trust & Integrity',
-    accent: 'bg-emerald-400/20',
-    textAccent: 'text-emerald-200',
+    accent: 'bg-emerald-300/15 border border-emerald-400/20',
+    textAccent: 'text-emerald-100/80',
+    holographic: 'from-emerald-400 via-teal-300 to-green-500',
+    chipColor: 'from-yellow-200 to-yellow-400',
+    networkLogo: 'VISA',
   },
   cultura: {
-    gradient: 'from-blue-500 via-indigo-500 to-purple-600',
+    gradient: 'from-slate-900 via-indigo-900 to-slate-950',
+    shimmer: 'from-blue-400/0 via-blue-300/30 to-blue-400/0',
     name: 'CULTURA',
     tagline: 'Global Citizen',
-    accent: 'bg-blue-400/20',
-    textAccent: 'text-blue-200',
+    accent: 'bg-blue-300/15 border border-blue-400/20',
+    textAccent: 'text-blue-100/80',
+    holographic: 'from-blue-400 via-purple-400 to-indigo-500',
+    chipColor: 'from-yellow-200 to-yellow-400',
+    networkLogo: 'VISA',
   },
 };
 
@@ -50,86 +62,133 @@ export function NexaCard({
   return (
     <div
       className={cn(
-        'relative w-full max-w-md aspect-[1.586/1] rounded-2xl p-6 overflow-hidden shadow-2xl',
-        'bg-gradient-to-br',
-        config.gradient,
+        'relative w-full max-w-md aspect-[1.586/1] rounded-2xl overflow-hidden',
+        'shadow-[0_25px_60px_-15px_rgba(0,0,0,0.6)]',
+        'group cursor-pointer',
         className
       )}
     >
-      {/* Card Pattern Overlay */}
-      <div className="absolute inset-0 opacity-10">
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_30%_20%,white_0%,transparent_50%)]" />
-        <div className="absolute inset-0 bg-[radial-gradient(circle_at_70%_80%,white_0%,transparent_50%)]" />
+      {/* Base Gradient */}
+      <div className={cn('absolute inset-0 bg-gradient-to-br', config.gradient)} />
+
+      {/* Metallic Texture Overlay */}
+      <div className="absolute inset-0 opacity-[0.08] bg-[repeating-linear-gradient(90deg,transparent,transparent_2px,rgba(255,255,255,0.1)_2px,rgba(255,255,255,0.1)_4px)]" />
+
+      {/* Soft Light Refraction */}
+      <div className="absolute inset-0 opacity-20">
+        <div className="absolute -top-1/2 -left-1/4 w-3/4 h-full bg-white/10 rounded-full blur-[80px] rotate-12" />
+        <div className="absolute -bottom-1/3 -right-1/4 w-1/2 h-full bg-white/5 rounded-full blur-[60px]" />
       </div>
 
-      {/* Shimmer Effect */}
-      <div className="absolute inset-0 opacity-20 overflow-hidden">
-        <div className="absolute inset-0 -translate-x-full animate-shimmer bg-gradient-to-r from-transparent via-white/30 to-transparent" />
+      {/* Holographic Strip */}
+      <div className={cn(
+        'absolute top-[22%] right-6 w-10 h-14 rounded-sm overflow-hidden opacity-60 group-hover:opacity-90 transition-opacity duration-500'
+      )}>
+        <div className={cn(
+          'absolute inset-0 bg-gradient-to-b', config.holographic,
+          'animate-pulse-glow'
+        )} />
+        <div className="absolute inset-0 bg-[repeating-linear-gradient(0deg,transparent,transparent_1px,rgba(255,255,255,0.15)_1px,rgba(255,255,255,0.15)_2px)]" />
+      </div>
+
+      {/* Shimmer Sweep Effect */}
+      <div className="absolute inset-0 overflow-hidden opacity-0 group-hover:opacity-100 transition-opacity duration-700">
+        <div className={cn(
+          'absolute inset-0 -translate-x-full group-hover:translate-x-full transition-transform duration-[1500ms] ease-in-out',
+          'bg-gradient-to-r', config.shimmer
+        )} />
       </div>
 
       {/* Card Content */}
-      <div className="relative h-full flex flex-col justify-between text-white">
-        {/* Header */}
+      <div className="relative h-full flex flex-col justify-between text-white p-6">
+        {/* Header Row */}
         <div className="flex items-start justify-between">
           <div>
-            <div className="flex items-center gap-2 mb-1">
-              <span className="text-xs font-medium tracking-widest opacity-80">NEXA</span>
-              <span className={cn('px-2 py-0.5 rounded text-[10px] font-bold tracking-wider', config.accent)}>
+            <div className="flex items-center gap-2.5 mb-1">
+              <span className="text-[11px] font-bold tracking-[0.35em] opacity-90 drop-shadow-sm">NEXA</span>
+              <span className={cn(
+                'px-2.5 py-0.5 rounded-md text-[9px] font-bold tracking-[0.2em]',
+                config.accent
+              )}>
                 {config.name}
               </span>
             </div>
-            <p className={cn('text-[10px] tracking-wide', config.textAccent)}>{config.tagline}</p>
+            <p className={cn('text-[9px] tracking-[0.15em] mt-0.5', config.textAccent)}>
+              {config.tagline}
+            </p>
           </div>
           <div className="flex items-center gap-2">
             {type === 'virtual' && (
-              <span className="text-[10px] px-2 py-0.5 rounded bg-white/20 font-medium">VIRTUAL</span>
+              <span className="text-[8px] px-2 py-0.5 rounded-full bg-white/10 border border-white/15 font-semibold tracking-wider">
+                VIRTUAL
+              </span>
             )}
-            <Wifi className="w-5 h-5 rotate-90 opacity-80" />
+            <Wifi className="w-4 h-4 rotate-90 opacity-50" />
           </div>
         </div>
 
-        {/* Chip */}
-        <div className="flex items-center gap-4">
-          <div className="w-12 h-9 rounded-md bg-gradient-to-br from-yellow-300 to-yellow-500 shadow-lg">
-            <div className="w-full h-full grid grid-cols-3 gap-px p-1">
-              {[...Array(6)].map((_, i) => (
-                <div key={i} className="bg-yellow-600/40 rounded-sm" />
+        {/* EMV Chip */}
+        <div className="flex items-center gap-5">
+          <div className="w-[52px] h-[38px] rounded-lg overflow-hidden shadow-[0_2px_8px_rgba(0,0,0,0.3)] relative">
+            <div className={cn('absolute inset-0 bg-gradient-to-br', config.chipColor)} />
+            <div className="absolute inset-0 flex flex-col justify-center gap-[3px] px-[6px]">
+              {[...Array(5)].map((_, i) => (
+                <div key={i} className="h-[3px] bg-yellow-700/25 rounded-full" />
               ))}
             </div>
+            <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[60%] h-[60%] border border-yellow-700/20 rounded-sm" />
           </div>
+
+          {/* Contactless Symbol */}
+          <div className="flex flex-col items-center gap-[2px] opacity-40">
+            <div className="w-3 h-1.5 border-t-2 border-white rounded-t-full" />
+            <div className="w-5 h-2.5 border-t-2 border-white rounded-t-full" />
+            <div className="w-7 h-3.5 border-t-2 border-white rounded-t-full" />
+          </div>
+
           {balance !== undefined && (
-            <div>
-              <p className="text-[10px] opacity-70">Balance</p>
-              <p className="text-lg font-bold">${balance.toLocaleString()}</p>
+            <div className="ml-auto text-right">
+              <p className="text-[9px] uppercase tracking-widest opacity-50">Balance</p>
+              <p className="text-xl font-bold tracking-tight drop-shadow-sm">
+                ${balance.toLocaleString('en-US', { minimumFractionDigits: 2 })}
+              </p>
             </div>
           )}
         </div>
 
         {/* Card Number */}
-        <div className="space-y-4">
-          <div className="flex items-center gap-4 text-lg tracking-[0.2em] font-mono">
-            <span className="opacity-60">••••</span>
-            <span className="opacity-60">••••</span>
-            <span className="opacity-60">••••</span>
-            <span>{lastFour}</span>
+        <div className="space-y-5">
+          <div className="flex items-center gap-5 text-[17px] tracking-[0.25em] font-mono drop-shadow-sm">
+            <span className="opacity-40">••••</span>
+            <span className="opacity-40">••••</span>
+            <span className="opacity-40">••••</span>
+            <span className="font-semibold">{lastFour}</span>
           </div>
 
           {/* Footer */}
           <div className="flex items-end justify-between">
             <div>
-              <p className="text-[10px] opacity-60 mb-0.5">CARD HOLDER</p>
-              <p className="text-sm font-medium tracking-wider">{holderName}</p>
+              <p className="text-[8px] uppercase tracking-[0.2em] opacity-40 mb-1">Card Holder</p>
+              <p className="text-[13px] font-semibold tracking-[0.12em] drop-shadow-sm">{holderName}</p>
             </div>
             <div className="text-right">
-              <p className="text-[10px] opacity-60 mb-0.5">EXPIRES</p>
-              <p className="text-sm font-medium">{expiryDate}</p>
+              <p className="text-[8px] uppercase tracking-[0.2em] opacity-40 mb-1">Valid Thru</p>
+              <p className="text-[13px] font-semibold tracking-wider drop-shadow-sm">{expiryDate}</p>
             </div>
-            <div className="flex items-center">
-              <CreditCard className="w-10 h-10 opacity-80" />
+            {/* Card Network Logo */}
+            <div className="flex items-center ml-2">
+              <div className="relative w-12 h-8 flex items-center justify-center">
+                <div className="absolute w-7 h-7 rounded-full bg-red-500/80 -left-0.5" />
+                <div className="absolute w-7 h-7 rounded-full bg-yellow-500/70 left-3" />
+                <div className="absolute w-7 h-7 rounded-full bg-orange-500/50 left-1.5" style={{ mixBlendMode: 'multiply' }} />
+              </div>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Edge highlight */}
+      <div className="absolute inset-0 rounded-2xl border border-white/10 pointer-events-none" />
     </div>
   );
 }
