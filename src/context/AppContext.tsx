@@ -55,6 +55,7 @@ const AppContext = createContext<AppContextType | undefined>(undefined);
 
 // Demo crypto assets (would come from API in production)
 const demoCryptoAssets: CryptoAsset[] = [
+  { symbol: 'NXA', name: 'NexaCoin', balance: 100.00, value: 850.00, change24h: 12.45, icon: 'N' },
   { symbol: 'BTC', name: 'Bitcoin', balance: 0.0245, value: 1543.20, change24h: 2.34, icon: '₿' },
   { symbol: 'ETH', name: 'Ethereum', balance: 1.532, value: 2987.50, change24h: -1.23, icon: 'Ξ' },
   { symbol: 'USDT', name: 'Tether', balance: 2500.00, value: 2500.00, change24h: 0.01, icon: '₮' },
