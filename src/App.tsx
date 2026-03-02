@@ -15,6 +15,7 @@ import Transfers from "./pages/Transfers";
 import Trading from "./pages/Trading";
 import BillPayments from "./pages/BillPayments";
 import Savings from "./pages/Savings";
+import Swap from "./pages/Swap";
 import Rewards from "./pages/Rewards";
 import Notifications from "./pages/Notifications";
 import Admin from "./pages/Admin";
@@ -42,6 +43,7 @@ const App = () => (
               <Route path="/trading" element={<Trading />} />
               <Route path="/bills" element={<BillPayments />} />
               <Route path="/savings" element={<Savings />} />
+              <Route path="/swap" element={<Swap />} />
               <Route path="/rewards" element={<Rewards />} />
               <Route path="/notifications" element={<Notifications />} />
               <Route path="/admin" element={<Admin />} />
