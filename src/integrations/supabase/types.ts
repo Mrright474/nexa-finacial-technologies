@@ -284,6 +284,45 @@ export type Database = {
         }
         Relationships: []
       }
+      nxa_stakes: {
+        Row: {
+          amount: number
+          apy: number
+          created_at: string
+          earned_rewards: number
+          end_date: string
+          id: string
+          lock_period_days: number
+          start_date: string
+          status: string
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          apy: number
+          created_at?: string
+          earned_rewards?: number
+          end_date: string
+          id?: string
+          lock_period_days: number
+          start_date?: string
+          status?: string
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          apy?: number
+          created_at?: string
+          earned_rewards?: number
+          end_date?: string
+          id?: string
+          lock_period_days?: number
+          start_date?: string
+          status?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       points_ledger: {
         Row: {
           action: string

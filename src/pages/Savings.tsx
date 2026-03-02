@@ -14,6 +14,7 @@ import {
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import NxaStaking from '@/components/savings/NxaStaking';
 
 // ── Demo Data ──────────────────────────────────────────────────────────────────
 
@@ -99,8 +100,9 @@ export default function Savings() {
 
         {/* Tabs */}
         <Tabs value={activeTab} onValueChange={setActiveTab} className="animate-slide-up delay-100">
-          <TabsList className="grid grid-cols-4 w-full max-w-xl bg-secondary/50 mb-6">
+          <TabsList className="grid grid-cols-5 w-full max-w-2xl bg-secondary/50 mb-6">
             <TabsTrigger value="goals" className="gap-1"><Target className="w-4 h-4" /> Goals</TabsTrigger>
+            <TabsTrigger value="nxa" className="gap-1"><Coins className="w-4 h-4" /> NXA</TabsTrigger>
             <TabsTrigger value="fixed" className="gap-1"><Lock className="w-4 h-4" /> Fixed</TabsTrigger>
             <TabsTrigger value="staking" className="gap-1"><Coins className="w-4 h-4" /> Staking</TabsTrigger>
             <TabsTrigger value="defi" className="gap-1"><Droplets className="w-4 h-4" /> DeFi</TabsTrigger>
@@ -178,6 +180,11 @@ export default function Savings() {
                 );
               })}
             </div>
+          </TabsContent>
+
+          {/* ── NXA Staking ── */}
+          <TabsContent value="nxa">
+            <NxaStaking />
           </TabsContent>
 
           {/* ── Fixed Deposits ── */}
