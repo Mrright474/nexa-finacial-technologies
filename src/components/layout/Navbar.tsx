@@ -16,7 +16,7 @@ export function Navbar() {
   const { packageType, setPackageType, userName } = useApp();
 
   const isLanding = location.pathname === '/';
-  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings') || location.pathname.startsWith('/rewards') || location.pathname.startsWith('/notifications') || location.pathname.startsWith('/swap');
+  const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings') || location.pathname.startsWith('/rewards') || location.pathname.startsWith('/notifications') || location.pathname.startsWith('/swap') || location.pathname.startsWith('/lending');
 
   const navLinks = [
     { href: '#features', label: 'Features' },
@@ -34,6 +34,7 @@ export function Navbar() {
     { href: '/bills', label: 'Bills', icon: Receipt },
     { href: '/savings', label: 'Savings', icon: Landmark },
     { href: '/swap', label: 'Swap', icon: ArrowDownUp },
+    { href: '/lending', label: 'Lending', icon: TrendingUp },
     { href: '/rewards', label: 'Rewards', icon: Gift },
   ];
 
