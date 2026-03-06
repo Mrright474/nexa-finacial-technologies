@@ -215,6 +215,63 @@ export type Database = {
         }
         Relationships: []
       }
+      loans: {
+        Row: {
+          approved_at: string | null
+          collateral_amount: number
+          collateral_currency: string
+          collateral_ratio: number
+          created_at: string
+          due_date: string | null
+          id: string
+          interest_rate: number
+          loan_amount: number
+          loan_currency: string
+          monthly_payment: number
+          remaining_balance: number
+          status: string
+          term_days: number
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          approved_at?: string | null
+          collateral_amount: number
+          collateral_currency?: string
+          collateral_ratio?: number
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          interest_rate?: number
+          loan_amount: number
+          loan_currency?: string
+          monthly_payment?: number
+          remaining_balance?: number
+          status?: string
+          term_days?: number
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          approved_at?: string | null
+          collateral_amount?: number
+          collateral_currency?: string
+          collateral_ratio?: number
+          created_at?: string
+          due_date?: string | null
+          id?: string
+          interest_rate?: number
+          loan_amount?: number
+          loan_currency?: string
+          monthly_payment?: number
+          remaining_balance?: number
+          status?: string
+          term_days?: number
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       login_activity: {
         Row: {
           browser: string | null
