@@ -86,7 +86,7 @@ export default function Lending() {
           </div>
         </div>
 
-        <ActiveLoans loans={loans} loading={loadingData} />
+        <ActiveLoans loans={loans} loading={loadingData} nxaPrice={nxaPrice} onRepaid={fetchData} />
       </main>
     </div>
   );
