@@ -9,6 +9,7 @@ import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
 import { supabase } from '@/integrations/supabase/client';
 import nexaCoinImg from '@/assets/nexa-coin.png';
+import { SwapHistory } from '@/components/swap/SwapHistory';
 
 interface PriceData {
   usd: number;
@@ -352,6 +353,11 @@ export default function Swap() {
             <RefreshCw className="w-3 h-3" /> Rates refresh every 30s •
             <button onClick={fetchPrices} className="text-primary hover:underline">Refresh now</button>
           </p>
+        </div>
+
+        {/* Swap History */}
+        <div className="mt-6">
+          <SwapHistory userId={user.id} />
         </div>
       </main>
     </div>
