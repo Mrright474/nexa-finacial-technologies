@@ -90,6 +90,7 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
         { description: `${qty} ${symbol} @ $${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` }
       );
       setAmount('');
+      await refreshBalances();
       onTradeComplete?.();
     } catch (err: any) {
       toast.error('Trade failed', { description: err.message });
