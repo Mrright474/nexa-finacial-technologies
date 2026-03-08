@@ -209,8 +209,8 @@ export default function Crypto() {
                   </thead>
                   <tbody>
                     {marketData.map((coin) => (
-                      <tr key={coin.symbol} className={cn(
-                        "border-b border-border/50 hover:bg-secondary/30 transition-colors",
+                      <tr key={coin.symbol} onClick={() => navigate(`/crypto/${coin.symbol.toLowerCase()}`)} className={cn(
+                        "border-b border-border/50 hover:bg-secondary/30 transition-colors cursor-pointer",
                         coin.featured && "bg-primary/5"
                       )}>
                         <td className="p-4">
