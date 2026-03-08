@@ -2,6 +2,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, TrendingDown, ArrowLeftRight, Plus, Search, Star, Zap, Shield, Globe } from 'lucide-react';
+import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import nexaCoinImg from '@/assets/nexa-coin.png';
