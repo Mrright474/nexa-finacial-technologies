@@ -1,3 +1,4 @@
+import { useNavigate } from 'react-router-dom';
 import { Navbar } from '@/components/layout/Navbar';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
@@ -22,6 +23,7 @@ const marketData = [
 
 export default function Crypto() {
   const { cryptoAssets } = useApp();
+  const navigate = useNavigate();
 
   const totalCryptoValue = cryptoAssets.reduce((acc, asset) => acc + asset.value, 0);
   const nexaAsset = cryptoAssets.find(a => a.symbol === 'NXA');
@@ -145,6 +147,7 @@ export default function Crypto() {
             {cryptoAssets.map((asset) => (
               <div
                 key={asset.symbol}
+                onClick={() => navigate(`/crypto/${asset.symbol.toLowerCase()}`)}
                 className={cn(
                   "glass-card p-4 hover:bg-white/10 transition-colors cursor-pointer",
                   asset.symbol === 'NXA' && "border-primary/30 bg-primary/5"
@@ -206,8 +209,8 @@ export default function Crypto() {
                   </thead>
                   <tbody>
                     {marketData.map((coin) => (
-                      <tr key={coin.symbol} className={cn(
-                        "border-b border-border/50 hover:bg-secondary/30 transition-colors",
+                      <tr key={coin.symbol} onClick={() => navigate(`/crypto/${coin.symbol.toLowerCase()}`)} className={cn(
+                        "border-b border-border/50 hover:bg-secondary/30 transition-colors cursor-pointer",
                         coin.featured && "bg-primary/5"
                       )}>
                         <td className="p-4">
