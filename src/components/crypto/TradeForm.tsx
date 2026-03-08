@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,8 +20,29 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
   const [amount, setAmount] = useState('');
   const [limitPrice, setLimitPrice] = useState(currentPrice.toString());
   const [submitting, setSubmitting] = useState(false);
+  const [usdBalance, setUsdBalance] = useState(0);
+  const [cryptoBalance, setCryptoBalance] = useState(0);
   const { deposit, withdraw, fetchWallets } = useWallet();
   const { user } = useAuth();
+
+  // Fetch real wallet balances
+  useEffect(() => {
+    if (!user) return;
+    fetchWallets().then((wallets) => {
+      const usd = wallets.find(w => w.currency === 'USD');
+      const crypto = wallets.find(w => w.currency === symbol);
+      setUsdBalance(Number(usd?.balance ?? 0));
+      setCryptoBalance(Number(crypto?.balance ?? 0));
+    });
+  }, [user, symbol]);
+
+  const refreshBalances = async () => {
+    const wallets = await fetchWallets();
+    const usd = wallets.find(w => w.currency === 'USD');
+    const crypto = wallets.find(w => w.currency === symbol);
+    setUsdBalance(Number(usd?.balance ?? 0));
+    setCryptoBalance(Number(crypto?.balance ?? 0));
+  };
 
   const price = orderType === 'market' ? currentPrice : parseFloat(limitPrice) || 0;
   const qty = parseFloat(amount) || 0;
@@ -69,6 +90,7 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
         { description: `${qty} ${symbol} @ $${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` }
       );
       setAmount('');
+      await refreshBalances();
       onTradeComplete?.();
     } catch (err: any) {
       toast.error('Trade failed', { description: err.message });
@@ -82,6 +104,16 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
   return (
     <div className="glass-card p-5 animate-slide-up">
       <h3 className="text-lg font-bold text-foreground mb-4">Trade {symbol}</h3>
+
+      {/* Available balance */}
+      <div className="flex justify-between items-center mb-4 p-2.5 rounded-lg bg-muted/50 text-sm">
+        <span className="text-muted-foreground">Available</span>
+        <span className="font-medium text-foreground">
+          {side === 'buy'
+            ? `$${usdBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            : `${cryptoBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${symbol}`}
+        </span>
+      </div>
 
       {/* Buy / Sell toggle */}
       <div className="grid grid-cols-2 gap-2 mb-4">
@@ -139,19 +171,25 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
         />
       </div>
 
-      {/* Quick percentages */}
+      {/* Quick percentages based on real balance */}
       <div className="grid grid-cols-4 gap-2 mb-4">
-        {percentages.map((p) => (
-          <Button
-            key={p}
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => setAmount(((p / 100) * 1000 / price).toFixed(6))}
-          >
-            {p}%
-          </Button>
-        ))}
+        {percentages.map((p) => {
+          const maxQty = side === 'buy'
+            ? (usdBalance * (p / 100)) / (price * 1.001) // account for fee
+            : cryptoBalance * (p / 100);
+          return (
+            <Button
+              key={p}
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => setAmount(maxQty > 0 ? maxQty.toFixed(6) : '0')}
+            >
+              {p}%
+            </Button>
+          );
+        })}
+        
       </div>
 
       {/* Summary */}
