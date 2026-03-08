@@ -3,6 +3,7 @@ import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, TrendingDown, ArrowLeftRight, Plus, Search, Star, Zap, Shield, Globe } from 'lucide-react';
 import { PriceAlerts } from '@/components/crypto/PriceAlerts';
+import { PriceChart } from '@/components/crypto/PriceChart';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import nexaCoinImg from '@/assets/nexa-coin.png';
@@ -121,6 +122,19 @@ export default function Crypto() {
               </Button>
             </div>
           </div>
+        </div>
+
+        {/* Price Charts */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8 animate-slide-up">
+          {marketData.slice(0, 4).map((coin) => (
+            <PriceChart
+              key={coin.symbol}
+              symbol={coin.symbol}
+              name={coin.name}
+              currentPrice={coin.price}
+              change24h={coin.change}
+            />
+          ))}
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
