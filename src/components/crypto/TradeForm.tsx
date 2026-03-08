@@ -30,12 +30,13 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
   // Fetch real wallet balances
   useEffect(() => {
     if (!user) return;
+    setBalancesLoading(true);
     fetchWallets().then((wallets) => {
       const usd = wallets.find(w => w.currency === 'USD');
       const crypto = wallets.find(w => w.currency === symbol);
       setUsdBalance(Number(usd?.balance ?? 0));
       setCryptoBalance(Number(crypto?.balance ?? 0));
-    });
+    }).finally(() => setBalancesLoading(false));
   }, [user, symbol]);
 
   const refreshBalances = async () => {
