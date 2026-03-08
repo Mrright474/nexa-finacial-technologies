@@ -23,6 +23,7 @@ const marketData = [
 
 export default function Crypto() {
   const { cryptoAssets } = useApp();
+  const navigate = useNavigate();
 
   const totalCryptoValue = cryptoAssets.reduce((acc, asset) => acc + asset.value, 0);
   const nexaAsset = cryptoAssets.find(a => a.symbol === 'NXA');
