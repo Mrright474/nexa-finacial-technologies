@@ -124,8 +124,9 @@ export default function Crypto() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Holdings */}
+          {/* Holdings & Price Alerts */}
           <div className="lg:col-span-1 space-y-4 animate-slide-up delay-100">
+            <PriceAlerts />
             <h3 className="text-lg font-semibold text-foreground">Your Holdings</h3>
             {cryptoAssets.map((asset) => (
               <div
