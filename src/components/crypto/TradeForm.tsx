@@ -105,6 +105,16 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
     <div className="glass-card p-5 animate-slide-up">
       <h3 className="text-lg font-bold text-foreground mb-4">Trade {symbol}</h3>
 
+      {/* Available balance */}
+      <div className="flex justify-between items-center mb-4 p-2.5 rounded-lg bg-muted/50 text-sm">
+        <span className="text-muted-foreground">Available</span>
+        <span className="font-medium text-foreground">
+          {side === 'buy'
+            ? `$${usdBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+            : `${cryptoBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${symbol}`}
+        </span>
+      </div>
+
       {/* Buy / Sell toggle */}
       <div className="grid grid-cols-2 gap-2 mb-4">
         <Button
@@ -161,18 +171,24 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
         />
       </div>
 
-      {/* Quick percentages */}
+      {/* Quick percentages based on real balance */}
       <div className="grid grid-cols-4 gap-2 mb-4">
-        {percentages.map((p) => (
-          <Button
-            key={p}
-            variant="outline"
-            size="sm"
-            className="text-xs"
-            onClick={() => setAmount(((p / 100) * 1000 / price).toFixed(6))}
-          >
-            {p}%
-          </Button>
+        {percentages.map((p) => {
+          const maxQty = side === 'buy'
+            ? (usdBalance * (p / 100)) / (price * 1.001) // account for fee
+            : cryptoBalance * (p / 100);
+          return (
+            <Button
+              key={p}
+              variant="outline"
+              size="sm"
+              className="text-xs"
+              onClick={() => setAmount(maxQty > 0 ? maxQty.toFixed(6) : '0')}
+            >
+              {p}%
+            </Button>
+          );
+        })}
         ))}
       </div>
 
