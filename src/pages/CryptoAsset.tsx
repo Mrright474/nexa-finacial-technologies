@@ -108,7 +108,7 @@ export default function CryptoAsset() {
             <PriceChart symbol={upperSymbol} name={name} currentPrice={data.price} change24h={data.change} />
           </div>
           <div>
-            <TradeForm symbol={upperSymbol} currentPrice={data.price} />
+            <TradeForm symbol={upperSymbol} currentPrice={data.price} onTradeComplete={refreshData} />
           </div>
         </div>
 
