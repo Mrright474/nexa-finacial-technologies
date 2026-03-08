@@ -148,16 +148,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }));
       setCards(dbCards);
 
-      // Build crypto assets from crypto/stablecoin wallets
+      // Build crypto assets from crypto/stablecoin wallets using live prices
       const cryptoWallets = dbWallets.filter(w => w.type === 'crypto' || w.type === 'stablecoin');
       const assets: CryptoAsset[] = cryptoWallets.map(w => {
-        const meta = cryptoMeta[w.currency];
+        const meta = cryptoNames[w.currency];
+        const priceData = prices[w.currency];
         return {
           symbol: w.currency,
           name: meta?.name || w.currency,
           balance: w.balance,
-          value: w.balance * (meta?.price || 0),
-          change24h: meta?.change24h || 0,
+          value: w.balance * (priceData?.usd || 0),
+          change24h: priceData?.usd_24h_change || 0,
           icon: meta?.icon || w.currency[0],
         };
       });
