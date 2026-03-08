@@ -6,7 +6,7 @@ import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 
 export function CryptoWidget() {
-  const { cryptoAssets } = useApp();
+  const { cryptoAssets, loading } = useApp();
 
   return (
     <div className="glass-card p-6 animate-slide-up delay-200">
