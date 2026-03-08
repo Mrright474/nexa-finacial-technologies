@@ -11,6 +11,7 @@ import Dashboard from "./pages/Dashboard";
 import Wallet from "./pages/Wallet";
 import Cards from "./pages/Cards";
 import Crypto from "./pages/Crypto";
+import CryptoAsset from "./pages/CryptoAsset";
 import Transfers from "./pages/Transfers";
 import Trading from "./pages/Trading";
 import BillPayments from "./pages/BillPayments";
