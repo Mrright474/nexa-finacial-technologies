@@ -101,9 +101,14 @@ export default function CryptoAsset() {
           </div>
         )}
 
-        {/* Full Chart */}
-        <div className="mb-6 animate-slide-up">
-          <PriceChart symbol={upperSymbol} name={name} currentPrice={data.price} change24h={data.change} />
+        {/* Chart + Trade Form */}
+        <div className="grid grid-cols-1 lg:grid-cols-3 gap-6 mb-6">
+          <div className="lg:col-span-2 animate-slide-up">
+            <PriceChart symbol={upperSymbol} name={name} currentPrice={data.price} change24h={data.change} />
+          </div>
+          <div>
+            <TradeForm symbol={upperSymbol} currentPrice={data.price} />
+          </div>
         </div>
 
         {/* Stats Bar */}
