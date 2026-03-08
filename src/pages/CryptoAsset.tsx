@@ -10,6 +10,7 @@ import nexaCoinImg from '@/assets/nexa-coin.png';
 import { OrderBook } from '@/components/crypto/OrderBook';
 import { TradeHistory } from '@/components/crypto/TradeHistory';
 import { AssetStats } from '@/components/crypto/AssetStats';
+import { TradeForm } from '@/components/crypto/TradeForm';
 
 const marketData: Record<string, { price: number; change: number; marketCap: string; volume: string; high24h: number; low24h: number; supply: string; maxSupply: string }> = {
   NXA: { price: 8.50, change: 12.45, marketCap: '850M', volume: '125M', high24h: 9.12, low24h: 7.80, supply: '100M', maxSupply: '500M' },
