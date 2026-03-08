@@ -40,6 +40,7 @@ const App = () => (
               <Route path="/wallet" element={<Wallet />} />
               <Route path="/cards" element={<Cards />} />
               <Route path="/crypto" element={<Crypto />} />
+              <Route path="/crypto/:symbol" element={<CryptoAsset />} />
               <Route path="/transfers" element={<Transfers />} />
               <Route path="/trading" element={<Trading />} />
               <Route path="/bills" element={<BillPayments />} />
