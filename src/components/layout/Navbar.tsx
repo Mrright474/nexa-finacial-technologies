@@ -6,6 +6,7 @@ import { useAuth } from '@/hooks/useAuth';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
 import { PackageType } from '@/hooks/useProfile';
+import { useNotifications } from '@/hooks/useNotifications';
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
