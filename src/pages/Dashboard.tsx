@@ -102,6 +102,7 @@ export default function Dashboard() {
               </div>
             </div>
             <CardPreview />
+            <LoanWidget />
             <KycUpload />
             <CryptoWidget />
             <PackageContent />
