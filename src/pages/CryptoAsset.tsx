@@ -32,7 +32,7 @@ const coinNames: Record<string, string> = {
 export default function CryptoAsset() {
   const { symbol } = useParams<{ symbol: string }>();
   const navigate = useNavigate();
-  const { cryptoAssets } = useApp();
+  const { cryptoAssets, refreshData } = useApp();
   const upperSymbol = symbol?.toUpperCase() ?? '';
   const data = marketData[upperSymbol];
   const name = coinNames[upperSymbol] ?? upperSymbol;
