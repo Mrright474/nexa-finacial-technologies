@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
+import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
@@ -22,18 +23,20 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
   const [submitting, setSubmitting] = useState(false);
   const [usdBalance, setUsdBalance] = useState(0);
   const [cryptoBalance, setCryptoBalance] = useState(0);
+  const [balancesLoading, setBalancesLoading] = useState(true);
   const { deposit, withdraw, fetchWallets } = useWallet();
   const { user } = useAuth();
 
   // Fetch real wallet balances
   useEffect(() => {
     if (!user) return;
+    setBalancesLoading(true);
     fetchWallets().then((wallets) => {
       const usd = wallets.find(w => w.currency === 'USD');
       const crypto = wallets.find(w => w.currency === symbol);
       setUsdBalance(Number(usd?.balance ?? 0));
       setCryptoBalance(Number(crypto?.balance ?? 0));
-    });
+    }).finally(() => setBalancesLoading(false));
   }, [user, symbol]);
 
   const refreshBalances = async () => {
@@ -108,11 +111,15 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
       {/* Available balance */}
       <div className="flex justify-between items-center mb-4 p-2.5 rounded-lg bg-muted/50 text-sm">
         <span className="text-muted-foreground">Available</span>
-        <span className="font-medium text-foreground">
-          {side === 'buy'
-            ? `$${usdBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-            : `${cryptoBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${symbol}`}
-        </span>
+        {balancesLoading ? (
+          <Skeleton className="h-4 w-24" />
+        ) : (
+          <span className="font-medium text-foreground">
+            {side === 'buy'
+              ? `$${usdBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+              : `${cryptoBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${symbol}`}
+          </span>
+        )}
       </div>
 
       {/* Buy / Sell toggle */}
