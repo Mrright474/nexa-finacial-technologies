@@ -124,6 +124,19 @@ export default function Crypto() {
           </div>
         </div>
 
+        {/* Price Charts */}
+        <div className="grid md:grid-cols-2 gap-6 mb-8 animate-slide-up">
+          {marketData.slice(0, 4).map((coin) => (
+            <PriceChart
+              key={coin.symbol}
+              symbol={coin.symbol}
+              name={coin.name}
+              currentPrice={coin.price}
+              change24h={coin.change}
+            />
+          ))}
+        </div>
+
         <div className="grid lg:grid-cols-3 gap-8">
           {/* Holdings & Price Alerts */}
           <div className="lg:col-span-1 space-y-4 animate-slide-up delay-100">
