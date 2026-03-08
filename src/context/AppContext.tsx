@@ -80,6 +80,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [cryptoAssets, setCryptoAssets] = useState<CryptoAsset[]>([]);
+  const [livePrices, setLivePrices] = useState<LivePrices>({});
   const [loading, setLoading] = useState(false);
 
   // Sync package type from profile
