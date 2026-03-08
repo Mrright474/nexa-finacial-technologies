@@ -56,18 +56,20 @@ interface AppContextType {
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Crypto price/metadata mapping for portfolio display
-const cryptoMeta: Record<string, { name: string; price: number; change24h: number; icon: string }> = {
-  NXA: { name: 'NexaCoin', price: 8.50, change24h: 12.45, icon: 'N' },
-  BTC: { name: 'Bitcoin', price: 63245.80, change24h: 2.34, icon: '₿' },
-  ETH: { name: 'Ethereum', price: 1950.42, change24h: -1.23, icon: 'Ξ' },
-  USDT: { name: 'Tether', price: 1.00, change24h: 0.01, icon: '₮' },
-  USDC: { name: 'USD Coin', price: 1.00, change24h: 0.00, icon: '$' },
-  BNB: { name: 'BNB', price: 245.30, change24h: 0.87, icon: 'B' },
-  SOL: { name: 'Solana', price: 148.25, change24h: 5.67, icon: 'S' },
-  XRP: { name: 'XRP', price: 0.52, change24h: -0.45, icon: 'X' },
-  ADA: { name: 'Cardano', price: 0.45, change24h: 1.23, icon: 'A' },
+// Static metadata (name/icon); prices come from the API
+const cryptoNames: Record<string, { name: string; icon: string }> = {
+  NXA: { name: 'NexaCoin', icon: 'N' },
+  BTC: { name: 'Bitcoin', icon: '₿' },
+  ETH: { name: 'Ethereum', icon: 'Ξ' },
+  USDT: { name: 'Tether', icon: '₮' },
+  USDC: { name: 'USD Coin', icon: '$' },
+  BNB: { name: 'BNB', icon: 'B' },
+  SOL: { name: 'Solana', icon: 'S' },
+  XRP: { name: 'XRP', icon: 'X' },
+  ADA: { name: 'Cardano', icon: 'A' },
 };
+
+type LivePrices = Record<string, { usd: number; usd_24h_change: number }>;
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
@@ -78,6 +80,7 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const [transactions, setTransactions] = useState<Transaction[]>([]);
   const [cards, setCards] = useState<Card[]>([]);
   const [cryptoAssets, setCryptoAssets] = useState<CryptoAsset[]>([]);
+  const [livePrices, setLivePrices] = useState<LivePrices>({});
   const [loading, setLoading] = useState(false);
 
   // Sync package type from profile
@@ -98,12 +101,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // Fetch wallets, transactions, and cards in parallel
-      const [walletsRes, txRes, cardsRes] = await Promise.all([
+      // Fetch wallets, transactions, cards, and live prices in parallel
+      const [walletsRes, txRes, cardsRes, pricesRes] = await Promise.all([
         supabase.from('wallets').select('*').eq('user_id', user.id).order('currency'),
         supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
         supabase.from('cards').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.functions.invoke('crypto-prices'),
       ]);
+
+      // Store live prices
+      const prices: LivePrices = pricesRes.data?.prices || {};
+      setLivePrices(prices);
 
       // Map wallets
       const dbWallets = (walletsRes.data || []).map((w) => ({
@@ -140,16 +148,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
       }));
       setCards(dbCards);
 
-      // Build crypto assets from crypto/stablecoin wallets
+      // Build crypto assets from crypto/stablecoin wallets using live prices
       const cryptoWallets = dbWallets.filter(w => w.type === 'crypto' || w.type === 'stablecoin');
       const assets: CryptoAsset[] = cryptoWallets.map(w => {
-        const meta = cryptoMeta[w.currency];
+        const meta = cryptoNames[w.currency];
+        const priceData = prices[w.currency];
         return {
           symbol: w.currency,
           name: meta?.name || w.currency,
           balance: w.balance,
-          value: w.balance * (meta?.price || 0),
-          change24h: meta?.change24h || 0,
+          value: w.balance * (priceData?.usd || 0),
+          change24h: priceData?.usd_24h_change || 0,
           icon: meta?.icon || w.currency[0],
         };
       });
@@ -176,9 +185,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const totalBalance = wallets.reduce((acc, wallet) => {
     if (wallet.currency === 'UGX') return acc + wallet.balance / 3700;
     if (wallet.currency === 'EUR') return acc + wallet.balance * 1.08;
-    // Use crypto prices for crypto wallets
-    const meta = cryptoMeta[wallet.currency];
-    if (meta && wallet.type !== 'fiat') return acc + wallet.balance * meta.price;
+    // Use live prices for crypto wallets
+    const priceData = livePrices[wallet.currency];
+    if (priceData && wallet.type !== 'fiat') return acc + wallet.balance * priceData.usd;
     return acc + wallet.balance;
   }, 0);
 
