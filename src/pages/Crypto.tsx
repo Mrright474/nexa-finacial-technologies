@@ -2,6 +2,7 @@ import { Navbar } from '@/components/layout/Navbar';
 import { useApp } from '@/context/AppContext';
 import { Button } from '@/components/ui/button';
 import { TrendingUp, TrendingDown, ArrowLeftRight, Plus, Search, Star, Zap, Shield, Globe } from 'lucide-react';
+import { PriceAlerts } from '@/components/crypto/PriceAlerts';
 import { cn } from '@/lib/utils';
 import { Input } from '@/components/ui/input';
 import nexaCoinImg from '@/assets/nexa-coin.png';
@@ -123,8 +124,9 @@ export default function Crypto() {
         </div>
 
         <div className="grid lg:grid-cols-3 gap-8">
-          {/* Holdings */}
+          {/* Holdings & Price Alerts */}
           <div className="lg:col-span-1 space-y-4 animate-slide-up delay-100">
+            <PriceAlerts />
             <h3 className="text-lg font-semibold text-foreground">Your Holdings</h3>
             {cryptoAssets.map((asset) => (
               <div

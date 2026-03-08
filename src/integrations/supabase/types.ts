@@ -443,6 +443,36 @@ export type Database = {
         }
         Relationships: []
       }
+      price_alerts: {
+        Row: {
+          condition: string
+          created_at: string
+          id: string
+          symbol: string
+          target_price: number
+          triggered: boolean
+          user_id: string
+        }
+        Insert: {
+          condition?: string
+          created_at?: string
+          id?: string
+          symbol: string
+          target_price: number
+          triggered?: boolean
+          user_id: string
+        }
+        Update: {
+          condition?: string
+          created_at?: string
+          id?: string
+          symbol?: string
+          target_price?: number
+          triggered?: boolean
+          user_id?: string
+        }
+        Relationships: []
+      }
       profiles: {
         Row: {
           avatar_url: string | null
