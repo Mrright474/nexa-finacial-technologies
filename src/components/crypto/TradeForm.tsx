@@ -178,8 +178,9 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
             : 'bg-destructive hover:bg-destructive/90 text-white shadow-destructive/25'
         )}
         onClick={handleSubmit}
+        disabled={submitting}
       >
-        {side === 'buy' ? 'Buy' : 'Sell'} {symbol}
+        {submitting ? 'Processing...' : `${side === 'buy' ? 'Buy' : 'Sell'} ${symbol}`}
       </Button>
     </div>
   );
