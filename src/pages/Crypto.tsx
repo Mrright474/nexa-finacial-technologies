@@ -147,6 +147,7 @@ export default function Crypto() {
             {cryptoAssets.map((asset) => (
               <div
                 key={asset.symbol}
+                onClick={() => navigate(`/crypto/${asset.symbol.toLowerCase()}`)}
                 className={cn(
                   "glass-card p-4 hover:bg-white/10 transition-colors cursor-pointer",
                   asset.symbol === 'NXA' && "border-primary/30 bg-primary/5"
