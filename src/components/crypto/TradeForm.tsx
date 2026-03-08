@@ -14,18 +14,25 @@ interface TradeFormProps {
   onTradeComplete?: () => void;
 }
 
-export function TradeForm({ symbol, currentPrice }: TradeFormProps) {
+export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormProps) {
   const [side, setSide] = useState<'buy' | 'sell'>('buy');
   const [orderType, setOrderType] = useState<'market' | 'limit'>('market');
   const [amount, setAmount] = useState('');
   const [limitPrice, setLimitPrice] = useState(currentPrice.toString());
+  const [submitting, setSubmitting] = useState(false);
+  const { deposit, withdraw, fetchWallets } = useWallet();
+  const { user } = useAuth();
 
   const price = orderType === 'market' ? currentPrice : parseFloat(limitPrice) || 0;
   const qty = parseFloat(amount) || 0;
   const total = qty * price;
   const fee = total * 0.001;
 
-  const handleSubmit = () => {
+  const handleSubmit = async () => {
+    if (!user) {
+      toast.error('Please sign in to trade');
+      return;
+    }
     if (!qty || qty <= 0) {
       toast.error('Enter a valid amount');
       return;
@@ -34,11 +41,40 @@ export function TradeForm({ symbol, currentPrice }: TradeFormProps) {
       toast.error('Enter a valid limit price');
       return;
     }
-    toast.success(
-      `${side === 'buy' ? 'Buy' : 'Sell'} ${orderType} order placed`,
-      { description: `${qty} ${symbol} @ $${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` }
-    );
-    setAmount('');
+
+    setSubmitting(true);
+    try {
+      if (side === 'buy') {
+        // Withdraw USD to pay, then deposit crypto
+        const usdCost = total + fee;
+        const withdrew = await withdraw('USD', usdCost);
+        if (!withdrew) {
+          setSubmitting(false);
+          return;
+        }
+        await deposit(symbol, qty);
+      } else {
+        // Withdraw crypto, then deposit USD proceeds
+        const withdrew = await withdraw(symbol, qty);
+        if (!withdrew) {
+          setSubmitting(false);
+          return;
+        }
+        const usdProceeds = total - fee;
+        await deposit('USD', usdProceeds);
+      }
+
+      toast.success(
+        `${side === 'buy' ? 'Buy' : 'Sell'} ${orderType} order executed`,
+        { description: `${qty} ${symbol} @ $${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` }
+      );
+      setAmount('');
+      onTradeComplete?.();
+    } catch (err: any) {
+      toast.error('Trade failed', { description: err.message });
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const percentages = [25, 50, 75, 100];
