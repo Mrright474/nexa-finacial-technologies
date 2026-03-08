@@ -1,6 +1,7 @@
-import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect, useCallback } from 'react';
 import { useAuth } from '@/hooks/useAuth';
 import { useProfile, PackageType } from '@/hooks/useProfile';
+import { supabase } from '@/integrations/supabase/client';
 
 interface Wallet {
   id: string;
@@ -49,51 +50,35 @@ interface AppContextType {
   cryptoAssets: CryptoAsset[];
   totalBalance: number;
   userName: string;
+  refreshData: () => void;
+  loading: boolean;
 }
 
 const AppContext = createContext<AppContextType | undefined>(undefined);
 
-// Demo crypto assets (would come from API in production)
-const demoCryptoAssets: CryptoAsset[] = [
-  { symbol: 'NXA', name: 'NexaCoin', balance: 100.00, value: 850.00, change24h: 12.45, icon: 'N' },
-  { symbol: 'BTC', name: 'Bitcoin', balance: 0.0245, value: 1543.20, change24h: 2.34, icon: '₿' },
-  { symbol: 'ETH', name: 'Ethereum', balance: 1.532, value: 2987.50, change24h: -1.23, icon: 'Ξ' },
-  { symbol: 'USDT', name: 'Tether', balance: 2500.00, value: 2500.00, change24h: 0.01, icon: '₮' },
-  { symbol: 'USDC', name: 'USD Coin', balance: 1200.00, value: 1200.00, change24h: 0.00, icon: '$' },
-];
-
-// Demo transactions for display
-const demoTransactions: Transaction[] = [
-  { id: '1', type: 'receive', amount: 500000, currency: 'UGX', status: 'completed', description: 'Payment from John K.', createdAt: new Date(Date.now() - 1000 * 60 * 30), recipientName: 'John Kamara' },
-  { id: '2', type: 'send', amount: 150.00, currency: 'USD', status: 'completed', description: 'Transfer to Sarah M.', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 2), recipientName: 'Sarah Mwangi' },
-  { id: '3', type: 'payment', amount: 45.99, currency: 'USD', status: 'completed', description: 'Netflix Subscription', createdAt: new Date(Date.now() - 1000 * 60 * 60 * 24) },
-];
-
-// Demo cards for display
-const demoCards: Card[] = [
-  { id: '1', type: 'virtual', network: 'visa', lastFour: '4829', expiryDate: '12/28', status: 'active', balance: 1500.00, spendLimit: 5000.00 },
-  { id: '2', type: 'physical', network: 'mastercard', lastFour: '7291', expiryDate: '08/27', status: 'active', balance: 2340.00, spendLimit: 10000.00 },
-];
-
-// Demo wallets for display
-const demoWallets: Wallet[] = [
-  { id: '1', currency: 'UGX', balance: 12500000, type: 'fiat' },
-  { id: '2', currency: 'USD', balance: 3420.50, type: 'fiat' },
-  { id: '3', currency: 'EUR', balance: 1850.25, type: 'fiat' },
-  { id: '4', currency: 'USDT', balance: 2500.00, type: 'stablecoin' },
-  { id: '5', currency: 'BTC', balance: 0.0245, type: 'crypto' },
-  { id: '6', currency: 'ETH', balance: 1.532, type: 'crypto' },
-];
+// Crypto price/metadata mapping for portfolio display
+const cryptoMeta: Record<string, { name: string; price: number; change24h: number; icon: string }> = {
+  NXA: { name: 'NexaCoin', price: 8.50, change24h: 12.45, icon: 'N' },
+  BTC: { name: 'Bitcoin', price: 63245.80, change24h: 2.34, icon: '₿' },
+  ETH: { name: 'Ethereum', price: 1950.42, change24h: -1.23, icon: 'Ξ' },
+  USDT: { name: 'Tether', price: 1.00, change24h: 0.01, icon: '₮' },
+  USDC: { name: 'USD Coin', price: 1.00, change24h: 0.00, icon: '$' },
+  BNB: { name: 'BNB', price: 245.30, change24h: 0.87, icon: 'B' },
+  SOL: { name: 'Solana', price: 148.25, change24h: 5.67, icon: 'S' },
+  XRP: { name: 'XRP', price: 0.52, change24h: -0.45, icon: 'X' },
+  ADA: { name: 'Cardano', price: 0.45, change24h: 1.23, icon: 'A' },
+};
 
 export function AppProvider({ children }: { children: ReactNode }) {
   const { user } = useAuth();
   const { profile, updatePackage } = useProfile();
   
   const [packageType, setPackageTypeState] = useState<PackageType>('cultura');
-  const [wallets] = useState<Wallet[]>(demoWallets);
-  const [transactions] = useState<Transaction[]>(demoTransactions);
-  const [cards] = useState<Card[]>(demoCards);
-  const [cryptoAssets] = useState<CryptoAsset[]>(demoCryptoAssets);
+  const [wallets, setWallets] = useState<Wallet[]>([]);
+  const [transactions, setTransactions] = useState<Transaction[]>([]);
+  const [cards, setCards] = useState<Card[]>([]);
+  const [cryptoAssets, setCryptoAssets] = useState<CryptoAsset[]>([]);
+  const [loading, setLoading] = useState(false);
 
   // Sync package type from profile
   useEffect(() => {
@@ -101,6 +86,85 @@ export function AppProvider({ children }: { children: ReactNode }) {
       setPackageTypeState(profile.package_type);
     }
   }, [profile]);
+
+  const fetchData = useCallback(async () => {
+    if (!user) {
+      setWallets([]);
+      setTransactions([]);
+      setCards([]);
+      setCryptoAssets([]);
+      return;
+    }
+
+    setLoading(true);
+    try {
+      // Fetch wallets, transactions, and cards in parallel
+      const [walletsRes, txRes, cardsRes] = await Promise.all([
+        supabase.from('wallets').select('*').eq('user_id', user.id).order('currency'),
+        supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
+        supabase.from('cards').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+      ]);
+
+      // Map wallets
+      const dbWallets = (walletsRes.data || []).map((w) => ({
+        id: w.id,
+        currency: w.currency,
+        balance: Number(w.balance),
+        type: w.wallet_type,
+      }));
+      setWallets(dbWallets);
+
+      // Map transactions
+      const dbTransactions = (txRes.data || []).map((t) => ({
+        id: t.id,
+        type: t.transaction_type,
+        amount: Number(t.amount),
+        currency: t.currency,
+        status: t.status,
+        description: t.description,
+        createdAt: new Date(t.created_at),
+        recipientName: t.recipient_name,
+      }));
+      setTransactions(dbTransactions);
+
+      // Map cards
+      const dbCards = (cardsRes.data || []).map((c) => ({
+        id: c.id,
+        type: c.card_type,
+        network: c.network,
+        lastFour: c.last_four,
+        expiryDate: c.expiry_date,
+        status: c.status,
+        balance: Number(c.balance),
+        spendLimit: Number(c.spend_limit),
+      }));
+      setCards(dbCards);
+
+      // Build crypto assets from crypto/stablecoin wallets
+      const cryptoWallets = dbWallets.filter(w => w.type === 'crypto' || w.type === 'stablecoin');
+      const assets: CryptoAsset[] = cryptoWallets.map(w => {
+        const meta = cryptoMeta[w.currency];
+        return {
+          symbol: w.currency,
+          name: meta?.name || w.currency,
+          balance: w.balance,
+          value: w.balance * (meta?.price || 0),
+          change24h: meta?.change24h || 0,
+          icon: meta?.icon || w.currency[0],
+        };
+      });
+      setCryptoAssets(assets);
+    } catch (err) {
+      console.error('Error fetching app data:', err);
+    } finally {
+      setLoading(false);
+    }
+  }, [user]);
+
+  // Fetch data when user changes
+  useEffect(() => {
+    fetchData();
+  }, [fetchData]);
 
   const setPackageType = async (type: PackageType) => {
     setPackageTypeState(type);
@@ -112,6 +176,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const totalBalance = wallets.reduce((acc, wallet) => {
     if (wallet.currency === 'UGX') return acc + wallet.balance / 3700;
     if (wallet.currency === 'EUR') return acc + wallet.balance * 1.08;
+    // Use crypto prices for crypto wallets
+    const meta = cryptoMeta[wallet.currency];
+    if (meta && wallet.type !== 'fiat') return acc + wallet.balance * meta.price;
     return acc + wallet.balance;
   }, 0);
 
@@ -128,6 +195,8 @@ export function AppProvider({ children }: { children: ReactNode }) {
         cryptoAssets,
         totalBalance,
         userName,
+        refreshData: fetchData,
+        loading,
       }}
     >
       {children}
