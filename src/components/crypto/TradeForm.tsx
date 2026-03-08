@@ -189,7 +189,7 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
             </Button>
           );
         })}
-        ))}
+        
       </div>
 
       {/* Summary */}
