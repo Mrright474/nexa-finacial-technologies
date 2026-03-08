@@ -111,11 +111,15 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
       {/* Available balance */}
       <div className="flex justify-between items-center mb-4 p-2.5 rounded-lg bg-muted/50 text-sm">
         <span className="text-muted-foreground">Available</span>
-        <span className="font-medium text-foreground">
-          {side === 'buy'
-            ? `$${usdBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
-            : `${cryptoBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${symbol}`}
-        </span>
+        {balancesLoading ? (
+          <Skeleton className="h-4 w-24" />
+        ) : (
+          <span className="font-medium text-foreground">
+            {side === 'buy'
+              ? `$${usdBalance.toLocaleString(undefined, { minimumFractionDigits: 2 })}`
+              : `${cryptoBalance.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${symbol}`}
+          </span>
+        )}
       </div>
 
       {/* Buy / Sell toggle */}
