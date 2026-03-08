@@ -185,9 +185,9 @@ export function AppProvider({ children }: { children: ReactNode }) {
   const totalBalance = wallets.reduce((acc, wallet) => {
     if (wallet.currency === 'UGX') return acc + wallet.balance / 3700;
     if (wallet.currency === 'EUR') return acc + wallet.balance * 1.08;
-    // Use crypto prices for crypto wallets
-    const meta = cryptoMeta[wallet.currency];
-    if (meta && wallet.type !== 'fiat') return acc + wallet.balance * meta.price;
+    // Use live prices for crypto wallets
+    const priceData = livePrices[wallet.currency];
+    if (priceData && wallet.type !== 'fiat') return acc + wallet.balance * priceData.usd;
     return acc + wallet.balance;
   }, 0);
 
