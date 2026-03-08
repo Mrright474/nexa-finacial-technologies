@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
@@ -20,8 +20,29 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
   const [amount, setAmount] = useState('');
   const [limitPrice, setLimitPrice] = useState(currentPrice.toString());
   const [submitting, setSubmitting] = useState(false);
+  const [usdBalance, setUsdBalance] = useState(0);
+  const [cryptoBalance, setCryptoBalance] = useState(0);
   const { deposit, withdraw, fetchWallets } = useWallet();
   const { user } = useAuth();
+
+  // Fetch real wallet balances
+  useEffect(() => {
+    if (!user) return;
+    fetchWallets().then((wallets) => {
+      const usd = wallets.find(w => w.currency === 'USD');
+      const crypto = wallets.find(w => w.currency === symbol);
+      setUsdBalance(Number(usd?.balance ?? 0));
+      setCryptoBalance(Number(crypto?.balance ?? 0));
+    });
+  }, [user, symbol]);
+
+  const refreshBalances = async () => {
+    const wallets = await fetchWallets();
+    const usd = wallets.find(w => w.currency === 'USD');
+    const crypto = wallets.find(w => w.currency === symbol);
+    setUsdBalance(Number(usd?.balance ?? 0));
+    setCryptoBalance(Number(crypto?.balance ?? 0));
+  };
 
   const price = orderType === 'market' ? currentPrice : parseFloat(limitPrice) || 0;
   const qty = parseFloat(amount) || 0;
