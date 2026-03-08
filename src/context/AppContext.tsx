@@ -101,12 +101,17 @@ export function AppProvider({ children }: { children: ReactNode }) {
 
     setLoading(true);
     try {
-      // Fetch wallets, transactions, and cards in parallel
-      const [walletsRes, txRes, cardsRes] = await Promise.all([
+      // Fetch wallets, transactions, cards, and live prices in parallel
+      const [walletsRes, txRes, cardsRes, pricesRes] = await Promise.all([
         supabase.from('wallets').select('*').eq('user_id', user.id).order('currency'),
         supabase.from('transactions').select('*').eq('user_id', user.id).order('created_at', { ascending: false }).limit(20),
         supabase.from('cards').select('*').eq('user_id', user.id).order('created_at', { ascending: false }),
+        supabase.functions.invoke('crypto-prices'),
       ]);
+
+      // Store live prices
+      const prices: LivePrices = pricesRes.data?.prices || {};
+      setLivePrices(prices);
 
       // Map wallets
       const dbWallets = (walletsRes.data || []).map((w) => ({
