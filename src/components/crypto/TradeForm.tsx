@@ -22,6 +22,7 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
   const [submitting, setSubmitting] = useState(false);
   const [usdBalance, setUsdBalance] = useState(0);
   const [cryptoBalance, setCryptoBalance] = useState(0);
+  const [balancesLoading, setBalancesLoading] = useState(true);
   const { deposit, withdraw, fetchWallets } = useWallet();
   const { user } = useAuth();
 
