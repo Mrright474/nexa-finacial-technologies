@@ -191,6 +191,21 @@ serve(async (req) => {
       } else if (healthRatio <= WARNING_THRESHOLD) {
         warnings.push(loan.id);
 
+        const isCritical = healthRatio <= CRITICAL_THRESHOLD;
+        const healthPercent = (healthRatio * 100).toFixed(0);
+
+        // Insert in-app notification
+        await supabase.from('notifications').insert({
+          user_id: loan.user_id,
+          type: 'loan_health',
+          title: isCritical ? 'Loan Health Critical' : 'Loan Health Warning',
+          message: isCritical
+            ? `Your loan health is at ${healthPercent}% — liquidation imminent. Repay now to protect your ${Number(loan.collateral_amount).toFixed(1)} NXA collateral.`
+            : `Your loan health dropped to ${healthPercent}%. Consider a partial repayment to avoid liquidation.`,
+          icon: isCritical ? 'alert-triangle' : 'trending-down',
+          color: isCritical ? 'from-red-500 to-rose-500' : 'from-amber-500 to-orange-500',
+        });
+
         // Send email warning if Resend is configured
         if (resendApiKey) {
           const { data: profile } = await supabase
