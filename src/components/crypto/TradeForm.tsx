@@ -2,14 +2,16 @@ import { useState } from 'react';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group';
 import { cn } from '@/lib/utils';
 import { toast } from 'sonner';
+import { useWallet } from '@/hooks/useWallet';
+import { useAuth } from '@/hooks/useAuth';
 
 interface TradeFormProps {
   symbol: string;
   currentPrice: number;
+  onTradeComplete?: () => void;
 }
 
 export function TradeForm({ symbol, currentPrice }: TradeFormProps) {
