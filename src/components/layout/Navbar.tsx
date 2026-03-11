@@ -269,16 +269,27 @@ export function Navbar() {
 
         {isOpen && (
           <div className="md:hidden py-4 space-y-4 animate-fade-in">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="block text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2"
-                onClick={() => setIsOpen(false)}
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              'isRoute' in link && link.isRoute ? (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="block text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="block text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {link.label}
+                </a>
+              )
+            )}
             <div className="pt-4 space-y-2">
               {user ? (
                 <>
