@@ -23,6 +23,7 @@ export function Navbar() {
   const navLinks = [
     { href: '#features', label: 'Features' },
     { href: '#packages', label: 'Packages' },
+    { href: '/about-nxa', label: 'NXA Token', isRoute: true },
     { href: '#security', label: 'Security' },
     { href: '#download', label: 'Download' },
   ];
