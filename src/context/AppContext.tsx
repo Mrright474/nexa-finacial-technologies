@@ -170,10 +170,13 @@ export function AppProvider({ children }: { children: ReactNode }) {
     }
   }, [user]);
 
-  // Fetch data when user changes
+  // Fetch data when user changes + auto-refresh every 30s
   useEffect(() => {
     fetchData();
-  }, [fetchData]);
+    if (!user) return;
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, [fetchData, user]);
 
   const setPackageType = async (type: PackageType) => {
     setPackageTypeState(type);
