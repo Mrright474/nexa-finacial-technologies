@@ -23,6 +23,7 @@ export function Navbar() {
   const navLinks = [
     { href: '#features', label: 'Features' },
     { href: '#packages', label: 'Packages' },
+    { href: '/about-nxa', label: 'NXA Token', isRoute: true },
     { href: '#security', label: 'Security' },
     { href: '#download', label: 'Download' },
   ];
@@ -217,15 +218,25 @@ export function Navbar() {
           </Link>
 
           <div className="hidden md:flex items-center gap-8">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              'isRoute' in link && link.isRoute ? (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="text-muted-foreground hover:text-foreground transition-colors text-sm font-medium"
+                >
+                  {link.label}
+                </a>
+              )
+            )}
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -258,16 +269,27 @@ export function Navbar() {
 
         {isOpen && (
           <div className="md:hidden py-4 space-y-4 animate-fade-in">
-            {navLinks.map((link) => (
-              <a
-                key={link.href}
-                href={link.href}
-                className="block text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2"
-                onClick={() => setIsOpen(false)}
-              >
-                {link.label}
-              </a>
-            ))}
+            {navLinks.map((link) =>
+              'isRoute' in link && link.isRoute ? (
+                <Link
+                  key={link.href}
+                  to={link.href}
+                  className="block text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {link.label}
+                </Link>
+              ) : (
+                <a
+                  key={link.href}
+                  href={link.href}
+                  className="block text-muted-foreground hover:text-foreground transition-colors text-sm font-medium py-2"
+                  onClick={() => setIsOpen(false)}
+                >
+                  {link.label}
+                </a>
+              )
+            )}
             <div className="pt-4 space-y-2">
               {user ? (
                 <>

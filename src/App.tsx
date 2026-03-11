@@ -22,6 +22,7 @@ import Rewards from "./pages/Rewards";
 import Notifications from "./pages/Notifications";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
+import AboutNxa from "./pages/AboutNxa";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -36,6 +37,7 @@ const App = () => (
             <Sonner />
             <Routes>
               <Route path="/" element={<Index />} />
+              <Route path="/about-nxa" element={<AboutNxa />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/wallet" element={<Wallet />} />
