@@ -22,6 +22,7 @@ import Rewards from "./pages/Rewards";
 import Notifications from "./pages/Notifications";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
+import AboutNxa from "./pages/AboutNxa";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
