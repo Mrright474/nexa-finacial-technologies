@@ -109,6 +109,17 @@ export function Tokenomics() {
             </div>
           </div>
         </div>
+
+        {/* CTA */}
+        <div className="text-center mt-12 animate-slide-up delay-400">
+          <Link
+            to="/about-nxa"
+            className="inline-flex items-center gap-2 text-primary hover:text-primary/80 font-semibold transition-colors"
+          >
+            Learn more about NXA
+            <ArrowRight className="w-4 h-4" />
+          </Link>
+        </div>
       </div>
     </section>
   );
