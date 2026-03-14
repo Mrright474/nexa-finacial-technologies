@@ -1,5 +1,6 @@
-import { Coins, Users, Landmark, ShieldCheck, Flame, Gift } from 'lucide-react';
+import { Coins, Users, Landmark, ShieldCheck, Flame, Gift, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
+import { Link } from 'react-router-dom';
 
 const distribution = [
   { label: 'Community & Rewards', pct: 35, color: 'bg-primary' },
