@@ -1,6 +1,7 @@
 import { Coins, Users, Landmark, ShieldCheck, Flame, Gift, ArrowRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Link } from 'react-router-dom';
+import { useEffect, useRef, useState, useCallback } from 'react';
 
 const distribution = [
   { label: 'Community & Rewards', pct: 35, color: 'bg-primary' },
@@ -20,11 +21,72 @@ const useCases = [
 ];
 
 const supplyStats = [
-  { value: '1B', label: 'Max Supply' },
-  { value: '420M', label: 'Circulating' },
-  { value: '25%', label: 'Staked' },
-  { value: '$0.42', label: 'Token Price' },
+  { target: 1000, suffix: 'M', prefix: '', decimals: 0, display: 'B', label: 'Max Supply' },
+  { target: 420, suffix: 'M', prefix: '', decimals: 0, display: 'M', label: 'Circulating' },
+  { target: 25, suffix: '%', prefix: '', decimals: 0, display: '%', label: 'Staked' },
+  { target: 0.42, suffix: '', prefix: '$', decimals: 2, display: '', label: 'Token Price' },
 ];
+
+function useCountUp(target: number, decimals: number, duration: number, start: boolean) {
+  const [value, setValue] = useState(0);
+
+  useEffect(() => {
+    if (!start) return;
+    let startTime: number | null = null;
+    let raf: number;
+
+    const step = (timestamp: number) => {
+      if (!startTime) startTime = timestamp;
+      const progress = Math.min((timestamp - startTime) / duration, 1);
+      // ease-out cubic
+      const eased = 1 - Math.pow(1 - progress, 3);
+      setValue(eased * target);
+      if (progress < 1) {
+        raf = requestAnimationFrame(step);
+      }
+    };
+
+    raf = requestAnimationFrame(step);
+    return () => cancelAnimationFrame(raf);
+  }, [target, duration, start, decimals]);
+
+  return value;
+}
+
+function AnimatedStat({ stat }: { stat: typeof supplyStats[number] }) {
+  const ref = useRef<HTMLDivElement>(null);
+  const [visible, setVisible] = useState(false);
+
+  useEffect(() => {
+    const el = ref.current;
+    if (!el) return;
+    const observer = new IntersectionObserver(
+      ([entry]) => { if (entry.isIntersecting) { setVisible(true); observer.disconnect(); } },
+      { threshold: 0.3 }
+    );
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, []);
+
+  const count = useCountUp(stat.target, stat.decimals, 2000, visible);
+
+  const formatValue = () => {
+    if (stat.target === 1000) {
+      // Show as "1B"
+      const b = count / 1000;
+      return `${stat.prefix}${b.toFixed(b >= 0.995 ? 0 : 1)}B`;
+    }
+    const formatted = stat.decimals > 0 ? count.toFixed(stat.decimals) : Math.round(count).toString();
+    return `${stat.prefix}${formatted}${stat.suffix}`;
+  };
+
+  return (
+    <div ref={ref}>
+      <p className="text-4xl sm:text-5xl font-bold gradient-text mb-2">{formatValue()}</p>
+      <p className="text-muted-foreground">{stat.label}</p>
+    </div>
+  );
+}
 
 export function Tokenomics() {
   return (
@@ -50,11 +112,8 @@ export function Tokenomics() {
         {/* Supply Stats */}
         <div className="glass-card p-8 sm:p-10 mb-12 animate-slide-up delay-100">
           <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-8 text-center">
-            {supplyStats.map((s, i) => (
-              <div key={s.label} className={`animate-slide-up delay-${(i + 1) * 100}`}>
-                <p className="text-4xl sm:text-5xl font-bold gradient-text mb-2">{s.value}</p>
-                <p className="text-muted-foreground">{s.label}</p>
-              </div>
+            {supplyStats.map((s) => (
+              <AnimatedStat key={s.label} stat={s} />
             ))}
           </div>
         </div>
