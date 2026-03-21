@@ -121,13 +121,13 @@ export function Navbar() {
             <div className="flex items-center gap-2 sm:gap-3">
               {/* NXA Price Ticker */}
               {nxaPrice !== null && (
-                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/80 border border-border/50">
+                <Link to="/about-nxa" className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/80 border border-border/50 hover:bg-secondary transition-colors cursor-pointer">
                   <span className="text-xs font-bold text-primary">NXA</span>
                   <span className="text-xs font-semibold text-foreground">${nxaPrice.toFixed(4)}</span>
                   <span className={cn("text-[10px] font-medium", nxaChange >= 0 ? "text-success" : "text-destructive")}>
                     {nxaChange >= 0 ? '▲' : '▼'} {Math.abs(nxaChange).toFixed(1)}%
                   </span>
-                </div>
+                </Link>
               )}
               {/* Package Switcher */}
               <div className="relative">
@@ -279,13 +279,13 @@ export function Navbar() {
 
           <div className="hidden md:flex items-center gap-3">
             {nxaPrice !== null && (
-              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/80 border border-border/50">
+              <Link to="/about-nxa" className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/80 border border-border/50 hover:bg-secondary transition-colors cursor-pointer">
                 <span className="text-xs font-bold text-primary">NXA</span>
                 <span className="text-xs font-semibold text-foreground">${nxaPrice.toFixed(4)}</span>
                 <span className={cn("text-[10px] font-medium", nxaChange >= 0 ? "text-success" : "text-destructive")}>
                   {nxaChange >= 0 ? '▲' : '▼'} {Math.abs(nxaChange).toFixed(1)}%
                 </span>
-              </div>
+              </Link>
             )}
             {user ? (
               <>
