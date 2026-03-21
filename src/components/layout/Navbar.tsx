@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X, Wallet, CreditCard, ArrowLeftRight, ArrowDownUp, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, Landmark, Bell, Gift } from 'lucide-react';
@@ -7,6 +7,33 @@ import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
 import { PackageType } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
+import { supabase } from '@/integrations/supabase/client';
+
+function useNxaPrice() {
+  const [price, setPrice] = useState<number | null>(null);
+  const [change24h, setChange24h] = useState<number>(0);
+
+  const fetchPrice = useCallback(async () => {
+    try {
+      const { data } = await supabase.functions.invoke('crypto-prices');
+      const nxa = data?.prices?.NXA;
+      if (nxa) {
+        setPrice(nxa.usd);
+        setChange24h(nxa.usd_24h_change || 0);
+      }
+    } catch (e) {
+      console.error('Failed to fetch NXA price', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPrice();
+    const interval = setInterval(fetchPrice, 30000);
+    return () => clearInterval(interval);
+  }, [fetchPrice]);
+
+  return { price, change24h };
+}
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
