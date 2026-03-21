@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
 import { Menu, X, Wallet, CreditCard, ArrowLeftRight, ArrowDownUp, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, Landmark, Bell, Gift } from 'lucide-react';
@@ -7,6 +7,33 @@ import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
 import { PackageType } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
+import { supabase } from '@/integrations/supabase/client';
+
+function useNxaPrice() {
+  const [price, setPrice] = useState<number | null>(null);
+  const [change24h, setChange24h] = useState<number>(0);
+
+  const fetchPrice = useCallback(async () => {
+    try {
+      const { data } = await supabase.functions.invoke('crypto-prices');
+      const nxa = data?.prices?.NXA;
+      if (nxa) {
+        setPrice(nxa.usd);
+        setChange24h(nxa.usd_24h_change || 0);
+      }
+    } catch (e) {
+      console.error('Failed to fetch NXA price', e);
+    }
+  }, []);
+
+  useEffect(() => {
+    fetchPrice();
+    const interval = setInterval(fetchPrice, 30000);
+    return () => clearInterval(interval);
+  }, [fetchPrice]);
+
+  return { price, change24h };
+}
 
 export function Navbar() {
   const [isOpen, setIsOpen] = useState(false);
@@ -16,6 +43,7 @@ export function Navbar() {
   const { user, signOut, isAdmin } = useAuth();
   const { packageType, setPackageType, userName } = useApp();
   const { unreadCount } = useNotifications();
+  const { price: nxaPrice, change24h: nxaChange } = useNxaPrice();
 
   const isLanding = location.pathname === '/';
   const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings') || location.pathname.startsWith('/rewards') || location.pathname.startsWith('/notifications') || location.pathname.startsWith('/swap') || location.pathname.startsWith('/lending');
@@ -91,6 +119,16 @@ export function Navbar() {
             </div>
 
             <div className="flex items-center gap-2 sm:gap-3">
+              {/* NXA Price Ticker */}
+              {nxaPrice !== null && (
+                <div className="hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/80 border border-border/50">
+                  <span className="text-xs font-bold text-primary">NXA</span>
+                  <span className="text-xs font-semibold text-foreground">${nxaPrice.toFixed(4)}</span>
+                  <span className={cn("text-[10px] font-medium", nxaChange >= 0 ? "text-success" : "text-destructive")}>
+                    {nxaChange >= 0 ? '▲' : '▼'} {Math.abs(nxaChange).toFixed(1)}%
+                  </span>
+                </div>
+              )}
               {/* Package Switcher */}
               <div className="relative">
                 <button
@@ -240,6 +278,15 @@ export function Navbar() {
           </div>
 
           <div className="hidden md:flex items-center gap-3">
+            {nxaPrice !== null && (
+              <div className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/80 border border-border/50">
+                <span className="text-xs font-bold text-primary">NXA</span>
+                <span className="text-xs font-semibold text-foreground">${nxaPrice.toFixed(4)}</span>
+                <span className={cn("text-[10px] font-medium", nxaChange >= 0 ? "text-success" : "text-destructive")}>
+                  {nxaChange >= 0 ? '▲' : '▼'} {Math.abs(nxaChange).toFixed(1)}%
+                </span>
+              </div>
+            )}
             {user ? (
               <>
                 <Link to="/dashboard">
