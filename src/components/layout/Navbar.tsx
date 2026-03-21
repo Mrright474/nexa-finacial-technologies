@@ -43,6 +43,7 @@ export function Navbar() {
   const { user, signOut, isAdmin } = useAuth();
   const { packageType, setPackageType, userName } = useApp();
   const { unreadCount } = useNotifications();
+  const { price: nxaPrice, change24h: nxaChange } = useNxaPrice();
 
   const isLanding = location.pathname === '/';
   const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings') || location.pathname.startsWith('/rewards') || location.pathname.startsWith('/notifications') || location.pathname.startsWith('/swap') || location.pathname.startsWith('/lending');
