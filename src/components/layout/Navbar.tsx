@@ -13,7 +13,7 @@ function useNxaPrice() {
   const [price, setPrice] = useState<number | null>(null);
   const [change24h, setChange24h] = useState<number>(0);
   const [isPulsing, setIsPulsing] = useState(false);
-  const prevPriceRef = useState<number | null>(null);
+  
 
   const fetchPrice = useCallback(async () => {
     try {
