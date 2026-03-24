@@ -50,7 +50,7 @@ export default function Dashboard() {
       <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Welcome Header with background */}
         <div className="mb-8 animate-slide-up relative overflow-hidden rounded-2xl glass-card p-6">
-          <div className="absolute top-0 right-0 w-48 h-48 opacity-15">
+          <div className="absolute top-0 right-0 w-48 h-48 opacity-20 animate-pulse drop-shadow-[0_0_25px_hsl(var(--primary)/0.6)]">
             <img src={nexaLogo} alt="" className="w-full h-full object-contain" loading="lazy" width={192} height={192} />
           </div>
           <div className="relative">
