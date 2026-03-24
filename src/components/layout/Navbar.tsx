@@ -8,6 +8,7 @@ import { cn } from '@/lib/utils';
 import { PackageType } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { supabase } from '@/integrations/supabase/client';
+import nexaLogo from '@/assets/nexacoin-logo.png';
 
 const MAX_SPARKLINE_POINTS = 20;
 
@@ -242,8 +243,8 @@ export function Navbar() {
               </Button>
               
               <Link to="/profile" className="hidden sm:block">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
-                  <span className="text-primary-foreground text-sm font-bold">N</span>
+                <div className="w-9 h-9 rounded-full overflow-hidden cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                  <img src={nexaLogo} alt="NexaCoin" className="w-full h-full object-cover" width={36} height={36} />
                 </div>
               </Link>
 
