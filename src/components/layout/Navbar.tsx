@@ -9,11 +9,13 @@ import { PackageType } from '@/hooks/useProfile';
 import { useNotifications } from '@/hooks/useNotifications';
 import { supabase } from '@/integrations/supabase/client';
 
+const MAX_SPARKLINE_POINTS = 20;
+
 function useNxaPrice() {
   const [price, setPrice] = useState<number | null>(null);
   const [change24h, setChange24h] = useState<number>(0);
   const [isPulsing, setIsPulsing] = useState(false);
-  
+  const [history, setHistory] = useState<number[]>([]);
 
   const fetchPrice = useCallback(async () => {
     try {
@@ -28,6 +30,10 @@ function useNxaPrice() {
           return nxa.usd;
         });
         setChange24h(nxa.usd_24h_change || 0);
+        setHistory((prev) => {
+          const next = [...prev, nxa.usd];
+          return next.length > MAX_SPARKLINE_POINTS ? next.slice(-MAX_SPARKLINE_POINTS) : next;
+        });
       }
     } catch (e) {
       console.error('Failed to fetch NXA price', e);
@@ -40,7 +46,36 @@ function useNxaPrice() {
     return () => clearInterval(interval);
   }, [fetchPrice]);
 
-  return { price, change24h, isPulsing };
+  return { price, change24h, isPulsing, history };
+}
+
+function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
+  if (data.length < 2) return null;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const range = max - min || 1;
+  const w = 40;
+  const h = 16;
+  const points = data
+    .map((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - ((v - min) / range) * h;
+      return `${x},${y}`;
+    })
+    .join(' ');
+
+  return (
+    <svg width={w} height={h} className="shrink-0" viewBox={`0 0 ${w} ${h}`}>
+      <polyline
+        points={points}
+        fill="none"
+        stroke={positive ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
+        strokeWidth="1.5"
+        strokeLinecap="round"
+        strokeLinejoin="round"
+      />
+    </svg>
+  );
 }
 
 export function Navbar() {
@@ -51,7 +86,7 @@ export function Navbar() {
   const { user, signOut, isAdmin } = useAuth();
   const { packageType, setPackageType, userName } = useApp();
   const { unreadCount } = useNotifications();
-  const { price: nxaPrice, change24h: nxaChange, isPulsing: nxaPulsing } = useNxaPrice();
+  const { price: nxaPrice, change24h: nxaChange, isPulsing: nxaPulsing, history: nxaHistory } = useNxaPrice();
 
   const isLanding = location.pathname === '/';
   const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings') || location.pathname.startsWith('/rewards') || location.pathname.startsWith('/notifications') || location.pathname.startsWith('/swap') || location.pathname.startsWith('/lending');
@@ -131,6 +166,7 @@ export function Navbar() {
               {nxaPrice !== null && (
                 <Link to="/about-nxa" className={cn("hidden sm:flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/80 border border-border/50 hover:bg-secondary transition-all cursor-pointer", nxaPulsing && "ring-2 ring-primary/40 animate-pulse")}>
                   <span className="text-xs font-bold text-primary">NXA</span>
+                  <Sparkline data={nxaHistory} positive={nxaChange >= 0} />
                   <span className="text-xs font-semibold text-foreground">${nxaPrice.toFixed(4)}</span>
                   <span className={cn("text-[10px] font-medium", nxaChange >= 0 ? "text-success" : "text-destructive")}>
                     {nxaChange >= 0 ? '▲' : '▼'} {Math.abs(nxaChange).toFixed(1)}%
@@ -289,6 +325,7 @@ export function Navbar() {
             {nxaPrice !== null && (
               <Link to="/about-nxa" className={cn("flex items-center gap-1.5 px-2.5 py-1 rounded-lg bg-secondary/80 border border-border/50 hover:bg-secondary transition-all cursor-pointer", nxaPulsing && "ring-2 ring-primary/40 animate-pulse")}>
                 <span className="text-xs font-bold text-primary">NXA</span>
+                <Sparkline data={nxaHistory} positive={nxaChange >= 0} />
                 <span className="text-xs font-semibold text-foreground">${nxaPrice.toFixed(4)}</span>
                 <span className={cn("text-[10px] font-medium", nxaChange >= 0 ? "text-success" : "text-destructive")}>
                   {nxaChange >= 0 ? '▲' : '▼'} {Math.abs(nxaChange).toFixed(1)}%
