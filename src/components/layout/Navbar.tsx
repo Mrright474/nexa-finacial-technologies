@@ -65,16 +65,24 @@ function Sparkline({ data, positive }: { data: number[]; positive: boolean }) {
     .join(' ');
 
   return (
-    <svg width={w} height={h} className="shrink-0" viewBox={`0 0 ${w} ${h}`}>
-      <polyline
-        points={points}
-        fill="none"
-        stroke={positive ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
-        strokeWidth="1.5"
-        strokeLinecap="round"
-        strokeLinejoin="round"
-      />
-    </svg>
+    <div className="relative group shrink-0">
+      <svg width={w} height={h} viewBox={`0 0 ${w} ${h}`}>
+        <polyline
+          points={points}
+          fill="none"
+          stroke={positive ? 'hsl(var(--success))' : 'hsl(var(--destructive))'}
+          strokeWidth="1.5"
+          strokeLinecap="round"
+          strokeLinejoin="round"
+        />
+      </svg>
+      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-2 hidden group-hover:flex items-center px-2 py-1 rounded-md bg-popover border border-border shadow-lg whitespace-nowrap z-50">
+        <span className="text-[10px] text-muted-foreground">
+          L: <span className="text-foreground font-medium">${min.toFixed(4)}</span>{' '}
+          H: <span className="text-foreground font-medium">${max.toFixed(4)}</span>
+        </span>
+      </div>
+    </div>
   );
 }
 
@@ -234,10 +242,8 @@ export function Navbar() {
               </Button>
               
               <Link to="/profile" className="hidden sm:block">
-                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-purple-500 flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
-                  <span className="text-white text-sm font-semibold">
-                    {userName?.[0]?.toUpperCase() || 'U'}
-                  </span>
+                <div className="w-9 h-9 rounded-full bg-gradient-to-br from-primary to-accent flex items-center justify-center cursor-pointer hover:ring-2 hover:ring-primary/50 transition-all">
+                  <span className="text-primary-foreground text-sm font-bold">N</span>
                 </div>
               </Link>
 
