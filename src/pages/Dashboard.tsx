@@ -13,7 +13,7 @@ import { LoanWidget } from '@/components/dashboard/LoanWidget';
 import { KycUpload } from '@/components/kyc/KycUpload';
 import { Bell, ArrowDownRight, Shield, TrendingUp, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
-import cryptoBg from '@/assets/crypto-bg.jpg';
+import nexaLogo from '@/assets/nexacoin-logo.png';
 
 const recentNotifications = [
   { id: '1', title: 'Payment Received', message: '$500.00 from John K.', time: '2m', icon: ArrowDownRight, color: 'from-green-500 to-emerald-500' },
@@ -50,8 +50,8 @@ export default function Dashboard() {
       <main className="pt-20 pb-8 px-4 sm:px-6 lg:px-8 max-w-7xl mx-auto">
         {/* Welcome Header with background */}
         <div className="mb-8 animate-slide-up relative overflow-hidden rounded-2xl glass-card p-6">
-          <div className="absolute top-0 right-0 w-48 h-48 opacity-10">
-            <img src={cryptoBg} alt="" className="w-full h-full object-cover rounded-2xl" loading="lazy" />
+          <div className="absolute top-0 right-0 w-48 h-48 opacity-15">
+            <img src={nexaLogo} alt="" className="w-full h-full object-contain" loading="lazy" width={192} height={192} />
           </div>
           <div className="relative">
             <h1 className="text-3xl font-bold text-foreground">
