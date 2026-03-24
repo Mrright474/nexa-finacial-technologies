@@ -12,13 +12,21 @@ import { supabase } from '@/integrations/supabase/client';
 function useNxaPrice() {
   const [price, setPrice] = useState<number | null>(null);
   const [change24h, setChange24h] = useState<number>(0);
+  const [isPulsing, setIsPulsing] = useState(false);
+  const prevPriceRef = useState<number | null>(null);
 
   const fetchPrice = useCallback(async () => {
     try {
       const { data } = await supabase.functions.invoke('crypto-prices');
       const nxa = data?.prices?.NXA;
       if (nxa) {
-        setPrice(nxa.usd);
+        setPrice((prev) => {
+          if (prev !== null && prev !== nxa.usd) {
+            setIsPulsing(true);
+            setTimeout(() => setIsPulsing(false), 1000);
+          }
+          return nxa.usd;
+        });
         setChange24h(nxa.usd_24h_change || 0);
       }
     } catch (e) {
@@ -32,7 +40,7 @@ function useNxaPrice() {
     return () => clearInterval(interval);
   }, [fetchPrice]);
 
-  return { price, change24h };
+  return { price, change24h, isPulsing };
 }
 
 export function Navbar() {
@@ -43,7 +51,7 @@ export function Navbar() {
   const { user, signOut, isAdmin } = useAuth();
   const { packageType, setPackageType, userName } = useApp();
   const { unreadCount } = useNotifications();
-  const { price: nxaPrice, change24h: nxaChange } = useNxaPrice();
+  const { price: nxaPrice, change24h: nxaChange, isPulsing: nxaPulsing } = useNxaPrice();
 
   const isLanding = location.pathname === '/';
   const isDashboard = location.pathname.startsWith('/dashboard') || location.pathname.startsWith('/wallet') || location.pathname.startsWith('/cards') || location.pathname.startsWith('/crypto') || location.pathname.startsWith('/admin') || location.pathname.startsWith('/transfers') || location.pathname.startsWith('/profile') || location.pathname.startsWith('/trading') || location.pathname.startsWith('/bills') || location.pathname.startsWith('/savings') || location.pathname.startsWith('/rewards') || location.pathname.startsWith('/notifications') || location.pathname.startsWith('/swap') || location.pathname.startsWith('/lending');
