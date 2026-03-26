@@ -6,6 +6,7 @@ import { NexaCard } from '@/components/cards/NexaCard';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import demoVideo from '@/assets/demo-video.mp4';
 import heroImage from '@/assets/hero-fintech.jpg';
+import nexaLogo from '@/assets/nexacoin-logo.png';
 
 export function Hero() {
   const [showDemo, setShowDemo] = useState(false);
