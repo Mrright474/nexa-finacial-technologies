@@ -6,6 +6,7 @@ import { NexaCard } from '@/components/cards/NexaCard';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
 import demoVideo from '@/assets/demo-video.mp4';
 import heroImage from '@/assets/hero-fintech.jpg';
+import nexaLogo from '@/assets/nexacoin-logo.png';
 
 export function Hero() {
   const [showDemo, setShowDemo] = useState(false);
@@ -80,15 +81,19 @@ export function Hero() {
 
           <div className="relative animate-slide-up delay-200">
             <div className="absolute inset-0 bg-gradient-to-r from-primary/30 to-purple-500/30 blur-3xl scale-110" />
-            <div className="relative space-y-6">
+            {/* NexaCoin Logo */}
+            <div className="absolute -top-10 left-1/2 -translate-x-1/2 z-10 w-24 h-24 animate-pulse drop-shadow-[0_0_30px_hsl(var(--primary)/0.7)]">
+              <img src={nexaLogo} alt="NexaCoin" className="w-full h-full object-contain" width={96} height={96} />
+            </div>
+            <div className="relative space-y-6 pt-8">
               {/* Floating Cards */}
               <div className="transform hover:scale-105 transition-transform duration-500">
                 <NexaCard packageType="cultura" type="virtual" lastFour="4829" />
               </div>
-              <div className="absolute top-20 -right-4 transform rotate-6 hover:rotate-0 transition-transform duration-500 opacity-80 scale-90">
+              <div className="absolute top-28 -right-4 transform rotate-6 hover:rotate-0 transition-transform duration-500 opacity-80 scale-90">
                 <NexaCard packageType="steward" type="virtual" lastFour="7291" />
               </div>
-              <div className="absolute top-40 -left-8 transform -rotate-6 hover:rotate-0 transition-transform duration-500 opacity-60 scale-75">
+              <div className="absolute top-48 -left-8 transform -rotate-6 hover:rotate-0 transition-transform duration-500 opacity-60 scale-75">
                 <NexaCard packageType="amanah" type="virtual" lastFour="3156" />
               </div>
             </div>
