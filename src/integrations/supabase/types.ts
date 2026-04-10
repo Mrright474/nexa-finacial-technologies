@@ -377,6 +377,48 @@ export type Database = {
         }
         Relationships: []
       }
+      nxa_price_history: {
+        Row: {
+          active_users_24h: number
+          circulating_supply: number
+          created_at: string
+          demand_score: number
+          id: string
+          price: number
+          supply_pressure: number
+          total_collateral: number
+          total_staked: number
+          total_supply: number
+          transaction_volume_24h: number
+        }
+        Insert: {
+          active_users_24h?: number
+          circulating_supply?: number
+          created_at?: string
+          demand_score?: number
+          id?: string
+          price: number
+          supply_pressure?: number
+          total_collateral?: number
+          total_staked?: number
+          total_supply?: number
+          transaction_volume_24h?: number
+        }
+        Update: {
+          active_users_24h?: number
+          circulating_supply?: number
+          created_at?: string
+          demand_score?: number
+          id?: string
+          price?: number
+          supply_pressure?: number
+          total_collateral?: number
+          total_staked?: number
+          total_supply?: number
+          transaction_volume_24h?: number
+        }
+        Relationships: []
+      }
       nxa_stakes: {
         Row: {
           amount: number
@@ -721,6 +763,19 @@ export type Database = {
       }
       clear_failed_attempts: { Args: { p_email: string }; Returns: undefined }
       clear_ip_block: { Args: { p_ip_address: string }; Returns: undefined }
+      compute_nxa_metrics: {
+        Args: never
+        Returns: {
+          active_users_24h: number
+          circulating_supply: number
+          demand_score: number
+          supply_pressure: number
+          total_collateral: number
+          total_staked: number
+          total_supply: number
+          tx_volume_24h: number
+        }[]
+      }
       get_user_points: { Args: { p_user_id: string }; Returns: number }
       has_role: {
         Args: {
