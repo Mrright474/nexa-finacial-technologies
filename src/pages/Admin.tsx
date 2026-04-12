@@ -10,12 +10,13 @@ import {
   Search, Download, Shield, Wallet, ArrowLeftRight,
   Activity, FileCheck, X, Check, Eye, UserCog, Ban, CheckCircle,
   Monitor, Smartphone, MapPin, Clock, AlertCircle, LogOut, Trash2,
-  ScrollText, UserX, Key, Settings, Radio, Lock, Unlock
+  ScrollText, UserX, Key, Settings, Radio, Lock, Unlock, Coins
 } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { useToast } from '@/hooks/use-toast';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription } from '@/components/ui/dialog';
+import { NxaTokenomicsPanel } from '@/components/admin/NxaTokenomicsPanel';
 import { 
   AlertDialog,
   AlertDialogAction,
@@ -665,6 +666,9 @@ export default function Admin() {
             </TabsTrigger>
             <TabsTrigger value="audit" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap">
               <ScrollText className="w-4 h-4" /> <span className="hidden sm:inline">Audit</span>
+            </TabsTrigger>
+            <TabsTrigger value="tokenomics" className="gap-1.5 text-xs sm:text-sm whitespace-nowrap">
+              <Coins className="w-4 h-4" /> <span className="hidden sm:inline">NXA</span>
             </TabsTrigger>
           </TabsList>
 
@@ -1689,6 +1693,14 @@ export default function Admin() {
                 )}
               </div>
             </div>
+          </div>
+        </TabsContent>
+
+        {/* NXA Tokenomics Tab */}
+        <TabsContent value="tokenomics">
+          <div className="glass-card p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-6">NXA Tokenomics Overview</h3>
+            <NxaTokenomicsPanel />
           </div>
         </TabsContent>
         </Tabs>
