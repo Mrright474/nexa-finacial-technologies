@@ -1695,6 +1695,14 @@ export default function Admin() {
             </div>
           </div>
         </TabsContent>
+
+        {/* NXA Tokenomics Tab */}
+        <TabsContent value="tokenomics">
+          <div className="glass-card p-6">
+            <h3 className="text-lg font-semibold text-foreground mb-6">NXA Tokenomics Overview</h3>
+            <NxaTokenomicsPanel />
+          </div>
+        </TabsContent>
         </Tabs>
 
         {/* User Detail Dialog */}
