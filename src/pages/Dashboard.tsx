@@ -10,6 +10,7 @@ import { CardPreview } from '@/components/dashboard/CardPreview';
 import { CryptoWidget } from '@/components/dashboard/CryptoWidget';
 import { PackageContent } from '@/components/dashboard/PackageContent';
 import { LoanWidget } from '@/components/dashboard/LoanWidget';
+import { TokenomicsWidget } from '@/components/dashboard/TokenomicsWidget';
 import { KycUpload } from '@/components/kyc/KycUpload';
 import { Bell, ArrowDownRight, Shield, TrendingUp, ChevronRight } from 'lucide-react';
 import { cn } from '@/lib/utils';
@@ -103,6 +104,7 @@ export default function Dashboard() {
             </div>
             <CardPreview />
             <LoanWidget />
+            <TokenomicsWidget />
             <KycUpload />
             <CryptoWidget />
             <PackageContent />
