@@ -193,7 +193,8 @@ serve(async (req) => {
       demand_score: 50, supply_pressure: 100,
     };
 
-    const nxa = computeNxaPrice(metrics, lastPrice);
+    const totalBurned = (metricsRes.data?.[0] as any)?.total_burned ?? 0;
+    const nxa = computeNxaPrice(metrics, lastPrice, totalBurned);
 
     // Record price snapshot in background (don't block response)
     recordPriceHistory(supabase, nxa.price, metrics).catch(e => 
