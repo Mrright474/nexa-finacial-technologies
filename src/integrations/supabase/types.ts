@@ -770,6 +770,7 @@ export type Database = {
           circulating_supply: number
           demand_score: number
           supply_pressure: number
+          total_burned: number
           total_collateral: number
           total_staked: number
           total_supply: number
