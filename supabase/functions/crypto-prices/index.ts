@@ -32,7 +32,7 @@ interface NxaMetrics {
  * Demand: High demand score (staking + collateral + activity) → price rises  
  * Activity: Transaction volume and user count provide a small bonus
  */
-function computeNxaPrice(metrics: NxaMetrics, lastPrice: number | null): { price: number; change24h: number } {
+function computeNxaPrice(metrics: NxaMetrics, lastPrice: number | null, totalBurned: number): { price: number; change24h: number } {
   const { total_supply, circulating_supply, total_staked, total_collateral, demand_score, supply_pressure, tx_volume_24h, active_users_24h } = metrics;
 
   // 1. Scarcity multiplier: less circulating = higher price
@@ -55,11 +55,15 @@ function computeNxaPrice(metrics: NxaMetrics, lastPrice: number | null): { price
   // More tokens minted = slight downward pressure
   const dilutionFactor = 1 - (total_supply / NXA_MAX_SUPPLY) * 0.1; // Range: 0.9 - 1.0
 
+  // 4b. Burn bonus: burned tokens permanently reduce supply, adding upward pressure
+  const burnRatio = totalBurned / Math.max(total_supply, 1);
+  const burnMultiplier = 1 + Math.min(burnRatio * 2, 0.15); // Up to 15% bonus from burns
+
   // 5. Market micro-volatility (small realistic noise)
   const noise = 1 + (Math.random() - 0.5) * 0.01; // ±0.5%
 
   // Compute raw price
-  let rawPrice = NXA_BASE_PRICE * scarcityMultiplier * demandMultiplier * activityMultiplier * dilutionFactor * noise;
+  let rawPrice = NXA_BASE_PRICE * scarcityMultiplier * demandMultiplier * activityMultiplier * dilutionFactor * burnMultiplier * noise;
 
   // 6. Smooth against last known price to prevent wild jumps
   if (lastPrice && lastPrice > 0) {
