@@ -133,7 +133,7 @@ export default function Swap() {
       }
 
       // Record transaction
-      await supabase.from('transactions').insert({
+      const { data: txData } = await supabase.from('transactions').insert({
         user_id: user.id,
         amount: parsedFromAmount,
         currency: fromCurrency,
@@ -141,7 +141,31 @@ export default function Swap() {
         status: 'completed',
         fee: fee * (toPrice || 1),
         description: `Swapped ${parsedFromAmount} ${fromCurrency} → ${toAmount.toFixed(4)} ${toCurrency}`,
-      });
+      }).select('id').single();
+
+      // Burn 10% of the fee in NXA terms when NXA is involved
+      const BURN_RATE = 0.10;
+      let nxaBurnAmount = 0;
+      const nxaPrice = prices['NXA']?.usd || 1;
+
+      if (fromCurrency === 'NXA') {
+        // Fee is in toCurrency units; convert to NXA
+        nxaBurnAmount = (fee * (toPrice || 1) / nxaPrice) * BURN_RATE;
+      } else if (toCurrency === 'NXA') {
+        nxaBurnAmount = fee * BURN_RATE;
+      } else {
+        // Neither side is NXA — convert fee USD value to NXA
+        nxaBurnAmount = (fee * (toPrice || 1) / nxaPrice) * BURN_RATE;
+      }
+
+      if (nxaBurnAmount > 0.000001) {
+        await supabase.from('nxa_burn_log' as any).insert({
+          user_id: user.id,
+          amount: nxaBurnAmount,
+          source: 'swap_fee',
+          transaction_id: txData?.id || null,
+        });
+      }
 
       toast.success(`Swapped ${parsedFromAmount} ${fromCurrency} → ${toAmount.toFixed(4)} ${toCurrency}`);
       setFromAmount('');
