@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react';
+import { supabase } from '@/integrations/supabase/client';
 import { Button } from '@/components/ui/button';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Input } from '@/components/ui/input';
@@ -92,6 +93,26 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
         `${side === 'buy' ? 'Buy' : 'Sell'} ${orderType} order executed`,
         { description: `${qty} ${symbol} @ $${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` }
       );
+
+      // Burn 10% of the trade fee in NXA terms
+      const BURN_RATE = 0.10;
+      let nxaBurnAmount = 0;
+      if (symbol === 'NXA') {
+        // Fee is in USD; convert to NXA
+        nxaBurnAmount = (fee / price) * BURN_RATE;
+      } else {
+        // Non-NXA trade: burn equivalent NXA value (assume NXA ~= currentPrice placeholder)
+        nxaBurnAmount = (fee / 8.5) * BURN_RATE; // approximate NXA price
+      }
+
+      if (nxaBurnAmount > 0.000001 && user) {
+        await supabase.from('nxa_burn_log' as any).insert({
+          user_id: user.id,
+          amount: nxaBurnAmount,
+          source: 'trade_fee',
+        });
+      }
+
       setAmount('');
       await refreshBalances();
       onTradeComplete?.();

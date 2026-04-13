@@ -377,6 +377,33 @@ export type Database = {
         }
         Relationships: []
       }
+      nxa_burn_log: {
+        Row: {
+          amount: number
+          created_at: string
+          id: string
+          source: string
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          amount: number
+          created_at?: string
+          id?: string
+          source?: string
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          amount?: number
+          created_at?: string
+          id?: string
+          source?: string
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       nxa_price_history: {
         Row: {
           active_users_24h: number
