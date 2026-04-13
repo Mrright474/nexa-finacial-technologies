@@ -446,6 +446,27 @@ export type Database = {
         }
         Relationships: []
       }
+      nxa_settings: {
+        Row: {
+          burn_rate_percent: number
+          id: string
+          updated_at: string
+          updated_by: string | null
+        }
+        Insert: {
+          burn_rate_percent?: number
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Update: {
+          burn_rate_percent?: number
+          id?: string
+          updated_at?: string
+          updated_by?: string | null
+        }
+        Relationships: []
+      }
       nxa_stakes: {
         Row: {
           amount: number

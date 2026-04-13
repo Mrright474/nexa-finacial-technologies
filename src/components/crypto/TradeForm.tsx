@@ -94,8 +94,13 @@ export function TradeForm({ symbol, currentPrice, onTradeComplete }: TradeFormPr
         { description: `${qty} ${symbol} @ $${price.toLocaleString(undefined, { minimumFractionDigits: 2 })}` }
       );
 
-      // Burn 10% of the trade fee in NXA terms
-      const BURN_RATE = 0.10;
+      // Get burn rate from settings
+      const { data: settingsData } = await supabase
+        .from('nxa_settings' as any)
+        .select('burn_rate_percent')
+        .limit(1)
+        .single();
+      const BURN_RATE = (Number((settingsData as any)?.burn_rate_percent) || 10) / 100;
       let nxaBurnAmount = 0;
       if (symbol === 'NXA') {
         // Fee is in USD; convert to NXA
