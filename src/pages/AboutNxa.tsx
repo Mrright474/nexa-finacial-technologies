@@ -8,6 +8,7 @@ import {
   Rocket, Globe, Zap, Target, CheckCircle2, ArrowRight,
   Lock, TrendingUp, Clock
 } from 'lucide-react';
+import { BurnCounter } from '@/components/nxa/BurnCounter';
 
 /* ─── Token Utility ─── */
 const utilities = [
