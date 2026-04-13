@@ -143,8 +143,13 @@ export default function Swap() {
         description: `Swapped ${parsedFromAmount} ${fromCurrency} → ${toAmount.toFixed(4)} ${toCurrency}`,
       }).select('id').single();
 
-      // Burn 10% of the fee in NXA terms when NXA is involved
-      const BURN_RATE = 0.10;
+      // Get burn rate from settings
+      const { data: settingsData } = await supabase
+        .from('nxa_settings' as any)
+        .select('burn_rate_percent')
+        .limit(1)
+        .single();
+      const BURN_RATE = (Number((settingsData as any)?.burn_rate_percent) || 10) / 100;
       let nxaBurnAmount = 0;
       const nxaPrice = prices['NXA']?.usd || 1;
 
