@@ -337,6 +337,9 @@ export function NxaTokenomicsPanel() {
 
       {/* Burn History Timeline */}
       <BurnHistoryTimeline />
+
+      {/* Web3 API Key Management */}
+      <ApiKeyManager />
     </div>
   );
 }
