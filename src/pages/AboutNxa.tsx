@@ -9,6 +9,7 @@ import {
   Lock, TrendingUp, Clock
 } from 'lucide-react';
 import { BurnCounter } from '@/components/nxa/BurnCounter';
+import { BurnHistoryTimeline } from '@/components/nxa/BurnHistoryTimeline';
 
 /* ─── Token Utility ─── */
 const utilities = [
