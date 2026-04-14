@@ -333,6 +333,9 @@ export function NxaTokenomicsPanel() {
           </div>
         </div>
       </div>
+
+      {/* Burn History Timeline */}
+      <BurnHistoryTimeline />
     </div>
   );
 }
