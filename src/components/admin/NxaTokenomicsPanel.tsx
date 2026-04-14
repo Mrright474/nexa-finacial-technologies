@@ -21,6 +21,7 @@ import {
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
 import { BurnHistoryTimeline } from '@/components/nxa/BurnHistoryTimeline';
+import { ApiKeyManager } from '@/components/admin/ApiKeyManager';
 
 interface NxaMetrics {
   total_supply: number;
