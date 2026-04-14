@@ -143,6 +143,15 @@ export default function AboutNxa() {
         {/* Live Burn Counter */}
         <BurnCounter />
 
+        {/* Burn History Timeline */}
+        <section className="py-12">
+          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="glass-card p-6 sm:p-8">
+              <BurnHistoryTimeline />
+            </div>
+          </div>
+        </section>
+
         {/* Token Utility */}
         <section className="py-20">
           <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
