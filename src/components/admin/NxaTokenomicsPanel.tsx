@@ -20,6 +20,7 @@ import {
   AlertDialogHeader,
   AlertDialogTitle,
 } from '@/components/ui/alert-dialog';
+import { BurnHistoryTimeline } from '@/components/nxa/BurnHistoryTimeline';
 
 interface NxaMetrics {
   total_supply: number;
