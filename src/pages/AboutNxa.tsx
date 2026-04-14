@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { BurnCounter } from '@/components/nxa/BurnCounter';
 import { BurnHistoryTimeline } from '@/components/nxa/BurnHistoryTimeline';
+import { BurnLeaderboard } from '@/components/nxa/BurnLeaderboard';
 
 /* ─── Token Utility ─── */
 const utilities = [
@@ -143,11 +144,16 @@ export default function AboutNxa() {
         {/* Live Burn Counter */}
         <BurnCounter />
 
-        {/* Burn History Timeline */}
+        {/* Burn History & Leaderboard */}
         <section className="py-12">
-          <div className="max-w-4xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div className="glass-card p-6 sm:p-8">
-              <BurnHistoryTimeline />
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="grid lg:grid-cols-2 gap-6">
+              <div className="glass-card p-6 sm:p-8">
+                <BurnHistoryTimeline />
+              </div>
+              <div className="glass-card p-6 sm:p-8">
+                <BurnLeaderboard />
+              </div>
             </div>
           </div>
         </section>

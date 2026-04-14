@@ -788,6 +788,45 @@ export type Database = {
         }
         Relationships: []
       }
+      web3_api_keys: {
+        Row: {
+          created_at: string
+          id: string
+          is_active: boolean
+          key_hash: string
+          key_prefix: string
+          label: string
+          last_used_at: string | null
+          permissions: Json
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_hash: string
+          key_prefix: string
+          label?: string
+          last_used_at?: string | null
+          permissions?: Json
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          created_at?: string
+          id?: string
+          is_active?: boolean
+          key_hash?: string
+          key_prefix?: string
+          label?: string
+          last_used_at?: string | null
+          permissions?: Json
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -823,6 +862,17 @@ export type Database = {
           total_staked: number
           total_supply: number
           tx_volume_24h: number
+        }[]
+      }
+      get_burn_leaderboard: {
+        Args: { p_limit?: number }
+        Returns: {
+          avatar_url: string
+          burn_count: number
+          first_name: string
+          last_name: string
+          total_burned: number
+          user_id: string
         }[]
       }
       get_user_points: { Args: { p_user_id: string }; Returns: number }
