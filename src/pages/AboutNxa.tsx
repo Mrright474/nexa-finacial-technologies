@@ -10,6 +10,7 @@ import {
 } from 'lucide-react';
 import { BurnCounter } from '@/components/nxa/BurnCounter';
 import { BurnHistoryTimeline } from '@/components/nxa/BurnHistoryTimeline';
+import { BurnLeaderboard } from '@/components/nxa/BurnLeaderboard';
 
 /* ─── Token Utility ─── */
 const utilities = [
