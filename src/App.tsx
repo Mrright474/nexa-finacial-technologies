@@ -23,6 +23,7 @@ import Notifications from "./pages/Notifications";
 import Admin from "./pages/Admin";
 import Profile from "./pages/Profile";
 import AboutNxa from "./pages/AboutNxa";
+import ApiDocs from "./pages/ApiDocs";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -38,6 +39,7 @@ const App = () => (
             <Routes>
               <Route path="/" element={<Index />} />
               <Route path="/about-nxa" element={<AboutNxa />} />
+              <Route path="/api-docs" element={<ApiDocs />} />
               <Route path="/auth" element={<Auth />} />
               <Route path="/dashboard" element={<Dashboard />} />
               <Route path="/wallet" element={<Wallet />} />
