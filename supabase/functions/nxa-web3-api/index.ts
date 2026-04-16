@@ -85,16 +85,16 @@ async function authenticate(req: Request): Promise<AuthResult | Response> {
       return errorResponse("Signature expired (>5 minutes)", 401);
     }
 
-    // Look up or create a user mapping for this wallet
+    // Look up user by linked wallet address
     const { data: existingWallet } = await supabaseAdmin
       .from("profiles")
       .select("user_id")
-      .ilike("phone", walletAddress)
+      .ilike("wallet_address", walletAddress)
       .single();
 
     if (!existingWallet) {
       return errorResponse(
-        "Wallet not linked to any account. Register at the platform first and link your wallet address in profile phone field.",
+        "Wallet not linked to any account. Link your wallet address in your Profile settings first.",
         403
       );
     }

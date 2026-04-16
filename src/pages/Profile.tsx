@@ -10,7 +10,7 @@ import { Label } from '@/components/ui/label';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { useToast } from '@/hooks/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { ArrowLeft, Bell, Camera, Eye, EyeOff, Loader2, Lock, User, Shield, Smartphone, Copy, Check, Monitor, Trash2, LogOut, Activity, MapPin, Clock } from 'lucide-react';
+import { ArrowLeft, Bell, Camera, Eye, EyeOff, Loader2, Lock, User, Shield, Smartphone, Copy, Check, Monitor, Trash2, LogOut, Activity, MapPin, Clock, Wallet } from 'lucide-react';
 import { Switch } from '@/components/ui/switch';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
@@ -24,6 +24,7 @@ export default function Profile() {
   const [firstName, setFirstName] = useState('');
   const [lastName, setLastName] = useState('');
   const [phone, setPhone] = useState('');
+  const [walletAddress, setWalletAddress] = useState('');
   const [saving, setSaving] = useState(false);
   const [uploadingAvatar, setUploadingAvatar] = useState(false);
   const [initialized, setInitialized] = useState(false);
@@ -408,6 +409,7 @@ export default function Profile() {
     setFirstName(profile.first_name || '');
     setLastName(profile.last_name || '');
     setPhone(profile.phone || '');
+    setWalletAddress((profile as any).wallet_address || '');
     setInitialized(true);
   }
 
@@ -470,12 +472,23 @@ export default function Profile() {
   };
 
   const handleSave = async () => {
+    // Basic wallet address validation
+    if (walletAddress && !/^0x[a-fA-F0-9]{40}$/.test(walletAddress)) {
+      toast({
+        variant: "destructive",
+        title: "Invalid wallet address",
+        description: "Please enter a valid Ethereum wallet address (0x...)",
+      });
+      return;
+    }
+
     setSaving(true);
     const { error } = await updateProfile({
       first_name: firstName,
       last_name: lastName,
       phone: phone,
-    });
+      wallet_address: walletAddress || null,
+    } as any);
 
     if (!error) {
       toast({
@@ -658,6 +671,23 @@ export default function Profile() {
                   onChange={(e) => setPhone(e.target.value)}
                   placeholder="+1 (555) 000-0000"
                 />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="walletAddress" className="flex items-center gap-2">
+                  <Wallet className="h-4 w-4 text-primary" />
+                  Web3 Wallet Address
+                </Label>
+                <Input
+                  id="walletAddress"
+                  value={walletAddress}
+                  onChange={(e) => setWalletAddress(e.target.value)}
+                  placeholder="0x..."
+                  className="font-mono text-sm"
+                />
+                <p className="text-xs text-muted-foreground">
+                  Link your Ethereum wallet to authenticate via the NXA Web3 API using wallet signatures.
+                </p>
               </div>
 
               <Button
