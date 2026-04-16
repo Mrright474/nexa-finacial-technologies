@@ -1,6 +1,6 @@
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
-import { Flame, Lock, Coins, BarChart3, TrendingUp, Users, Activity, Settings, AlertCircle } from 'lucide-react';
+import { Flame, Lock, Coins, BarChart3, TrendingUp, Users, Activity, Settings, AlertCircle, BookOpen } from 'lucide-react';
 import { cn } from '@/lib/utils';
 import { Skeleton } from '@/components/ui/skeleton';
 import { Progress } from '@/components/ui/progress';
@@ -340,6 +340,22 @@ export function NxaTokenomicsPanel() {
 
       {/* Web3 API Key Management */}
       <ApiKeyManager />
+
+      {/* API Documentation Link */}
+      <div className="flex items-center justify-between p-4 rounded-lg border border-border bg-card">
+        <div className="flex items-center gap-3">
+          <BookOpen className="w-5 h-5 text-primary" />
+          <div>
+            <p className="font-semibold text-sm text-foreground">Web3 API Documentation</p>
+            <p className="text-xs text-muted-foreground">View all endpoints, auth methods, and example requests</p>
+          </div>
+        </div>
+        <a href="/api-docs" target="_blank" rel="noopener noreferrer">
+          <Button variant="outline" size="sm" className="gap-2">
+            <BookOpen className="w-4 h-4" /> View Docs
+          </Button>
+        </a>
+      </div>
     </div>
   );
 }

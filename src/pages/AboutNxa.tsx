@@ -6,7 +6,7 @@ import { cn } from '@/lib/utils';
 import {
   Coins, Gift, Landmark, ShieldCheck, Flame, Users, Vote,
   Rocket, Globe, Zap, Target, CheckCircle2, ArrowRight,
-  Lock, TrendingUp, Clock
+  Lock, TrendingUp, Clock, BookOpen
 } from 'lucide-react';
 import { BurnCounter } from '@/components/nxa/BurnCounter';
 import { BurnHistoryTimeline } from '@/components/nxa/BurnHistoryTimeline';
@@ -116,6 +116,11 @@ export default function AboutNxa() {
               <Link to="/savings">
                 <Button variant="outline" size="lg" className="gap-2">
                   <Landmark className="w-5 h-5" /> Start Staking
+                </Button>
+              </Link>
+              <Link to="/api-docs">
+                <Button variant="outline" size="lg" className="gap-2">
+                  <BookOpen className="w-5 h-5" /> API Docs
                 </Button>
               </Link>
             </div>
