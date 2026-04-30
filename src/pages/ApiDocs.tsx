@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, Globe, Lock, Zap, Shield, BookOpen, Terminal, Code2 } from "lucide-react";
+import { ArrowLeft, Copy, Check, Globe, Lock, Zap, Shield, BookOpen, Terminal, Code2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
