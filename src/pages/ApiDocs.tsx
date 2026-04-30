@@ -383,12 +383,54 @@ function downloadSnippet(ep: Endpoint, lang: Lang) {
   URL.revokeObjectURL(url);
 }
 
+async function downloadAllSnippets(ep: Endpoint) {
+  const zip = new JSZip();
+  const slug = (ep.path.replace(/\//g, "") || "health").toLowerCase();
+  const langs: { lang: Lang; ext: string; commentPrefix: string }[] = [
+    { lang: "fetch", ext: "ts", commentPrefix: "//" },
+    { lang: "node", ext: "ts", commentPrefix: "//" },
+    { lang: "python", ext: "py", commentPrefix: "#" },
+    { lang: "sdk", ext: "ts", commentPrefix: "//" },
+  ];
+
+  for (const { lang, ext, commentPrefix } of langs) {
+    const header = `${commentPrefix} NXA Web3 API — ${ep.method} ${ep.path}\n${commentPrefix} ${ep.title}\n${commentPrefix} ${ep.description}\n\n`;
+    zip.file(`nxa-${slug}-${lang}.${ext}`, header + generateSnippet(ep, lang));
+  }
+
+  zip.file(
+    "README.md",
+    `# NXA Web3 API — ${ep.method} ${ep.path}\n\n${ep.title}\n\n${ep.description}\n\n## Files\n\n- \`nxa-${slug}-fetch.ts\` — Browser fetch example\n- \`nxa-${slug}-node.ts\` — Node.js axios example\n- \`nxa-${slug}-python.py\` — Python requests example\n- \`nxa-${slug}-sdk.ts\` — Using the NexaCoin SDK\n`,
+  );
+
+  const blob = await zip.generateAsync({ type: "blob" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = `nxa-${slug}-snippets.zip`;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function SnippetTabs({ ep }: { ep: Endpoint }) {
   const [active, setActive] = useState<Lang>("fetch");
+  const [zipping, setZipping] = useState(false);
+
+  const handleZip = async () => {
+    setZipping(true);
+    try {
+      await downloadAllSnippets(ep);
+    } finally {
+      setZipping(false);
+    }
+  };
+
   return (
     <Tabs value={active} onValueChange={(v) => setActive(v as Lang)} className="w-full">
-      <div className="flex items-center gap-2">
-        <TabsList className="grid flex-1 grid-cols-4 h-9">
+      <div className="flex items-center gap-2 flex-wrap">
+        <TabsList className="grid flex-1 min-w-[260px] grid-cols-4 h-9">
           <TabsTrigger value="fetch" className="text-xs">JS Fetch</TabsTrigger>
           <TabsTrigger value="node" className="text-xs">Node.js</TabsTrigger>
           <TabsTrigger value="python" className="text-xs">Python</TabsTrigger>
@@ -402,7 +444,18 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
           onClick={() => downloadSnippet(ep, active)}
         >
           <Download className="w-3.5 h-3.5" />
-          <span className="text-xs">Download</span>
+          <span className="text-xs">File</span>
+        </Button>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1.5 shrink-0"
+          onClick={handleZip}
+          disabled={zipping}
+        >
+          <Package className="w-3.5 h-3.5" />
+          <span className="text-xs">{zipping ? "Zipping…" : "All (.zip)"}</span>
         </Button>
       </div>
       {(["fetch", "node", "python", "sdk"] as Lang[]).map((l) => (
