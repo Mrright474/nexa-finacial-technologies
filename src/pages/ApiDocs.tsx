@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, Globe, Lock, Zap, Shield, BookOpen, Terminal, Code2 } from "lucide-react";
+import { ArrowLeft, Copy, Check, Globe, Lock, Zap, Shield, BookOpen, Terminal, Code2, Download } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -360,15 +360,50 @@ const result = await nxa.${fnName}(${args});
 console.log(result);`;
 }
 
+function downloadSnippet(ep: Endpoint, lang: Lang) {
+  const extMap: Record<Lang, string> = { fetch: "ts", node: "ts", python: "py", sdk: "ts" };
+  const ext = extMap[lang];
+  const slug = (ep.path.replace(/\//g, "") || "health").toLowerCase();
+  const filename = `nxa-${slug}-${lang}.${ext}`;
+  const header =
+    ext === "py"
+      ? `# NXA Web3 API — ${ep.method} ${ep.path}\n# ${ep.title}\n# ${ep.description}\n\n`
+      : `// NXA Web3 API — ${ep.method} ${ep.path}\n// ${ep.title}\n// ${ep.description}\n\n`;
+  const blob = new Blob([header + generateSnippet(ep, lang)], {
+    type: ext === "py" ? "text/x-python" : "text/typescript",
+  });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
 function SnippetTabs({ ep }: { ep: Endpoint }) {
+  const [active, setActive] = useState<Lang>("fetch");
   return (
-    <Tabs defaultValue="fetch" className="w-full">
-      <TabsList className="grid w-full grid-cols-4 h-9">
-        <TabsTrigger value="fetch" className="text-xs">JS Fetch</TabsTrigger>
-        <TabsTrigger value="node" className="text-xs">Node.js</TabsTrigger>
-        <TabsTrigger value="python" className="text-xs">Python</TabsTrigger>
-        <TabsTrigger value="sdk" className="text-xs">SDK</TabsTrigger>
-      </TabsList>
+    <Tabs value={active} onValueChange={(v) => setActive(v as Lang)} className="w-full">
+      <div className="flex items-center gap-2">
+        <TabsList className="grid flex-1 grid-cols-4 h-9">
+          <TabsTrigger value="fetch" className="text-xs">JS Fetch</TabsTrigger>
+          <TabsTrigger value="node" className="text-xs">Node.js</TabsTrigger>
+          <TabsTrigger value="python" className="text-xs">Python</TabsTrigger>
+          <TabsTrigger value="sdk" className="text-xs">SDK</TabsTrigger>
+        </TabsList>
+        <Button
+          type="button"
+          variant="outline"
+          size="sm"
+          className="h-9 gap-1.5 shrink-0"
+          onClick={() => downloadSnippet(ep, active)}
+        >
+          <Download className="w-3.5 h-3.5" />
+          <span className="text-xs">Download</span>
+        </Button>
+      </div>
       {(["fetch", "node", "python", "sdk"] as Lang[]).map((l) => (
         <TabsContent key={l} value={l} className="mt-2">
           <CodeBlock code={generateSnippet(ep, l)} language={l === "python" ? "python" : "javascript"} />
