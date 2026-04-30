@@ -426,6 +426,7 @@ export class NxaClient {
 // const { balance } = await nxa.balance();
 `;
 
+const ApiDocs = () => {
   const navigate = useNavigate();
   const publicEndpoints = endpoints.filter((e) => !e.auth);
   const authEndpoints = endpoints.filter((e) => e.auth);
