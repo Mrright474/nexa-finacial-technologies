@@ -469,22 +469,40 @@ async function downloadAllSnippets(
 function SnippetTabs({ ep }: { ep: Endpoint }) {
   const [active, setActive] = useState<Lang>("fetch");
   const [zipping, setZipping] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
   const [zipPhase, setZipPhase] = useState<"generating" | "zipping" | "done">("generating");
   const [zipPercent, setZipPercent] = useState(0);
   const [cancelled, setCancelled] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
-  const handleZip = async () => {
-    const controller = new AbortController();
-    abortRef.current = controller;
-    setZipping(true);
+  const resetZipState = () => {
+    setZipping(false);
+    setCancelling(false);
     setCancelled(false);
     setZipPhase("generating");
     setZipPercent(0);
+    abortRef.current = null;
+  };
+
+  const handleZip = async () => {
+    // Guard against re-entry while a previous job is still tearing down
+    if (zipping || cancelling || abortRef.current) return;
+
+    const controller = new AbortController();
+    abortRef.current = controller;
+    setZipping(true);
+    setCancelling(false);
+    setCancelled(false);
+    setZipPhase("generating");
+    setZipPercent(0);
+
+    let wasCancelled = false;
     try {
       await downloadAllSnippets(
         ep,
         (phase, percent) => {
+          // Ignore late progress updates after cancellation
+          if (controller.signal.aborted) return;
           setZipPhase(phase);
           setZipPercent(percent);
         },
@@ -494,28 +512,40 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
       await new Promise((r) => setTimeout(r, 400));
     } catch (err) {
       if ((err as Error)?.name === "CancelledError") {
-        setCancelled(true);
-        await new Promise((r) => setTimeout(r, 800));
+        wasCancelled = true;
       } else {
+        resetZipState();
         throw err;
       }
-    } finally {
-      abortRef.current = null;
-      setZipping(false);
     }
+
+    if (wasCancelled) {
+      setCancelled(true);
+      setCancelling(false);
+      // Show "Cancelled" briefly so the user gets clear feedback
+      await new Promise((r) => setTimeout(r, 900));
+    }
+
+    resetZipState();
   };
 
   const handleCancel = () => {
+    if (!zipping || cancelling) return;
+    setCancelling(true);
     abortRef.current?.abort();
   };
 
+  const busy = zipping || cancelling;
+
   const phaseLabel = cancelled
     ? "Cancelled"
-    : zipPhase === "generating"
-      ? "Generating snippets…"
-      : zipPhase === "zipping"
-        ? "Zipping files…"
-        : "Done";
+    : cancelling
+      ? "Cancelling…"
+      : zipPhase === "generating"
+        ? "Generating snippets…"
+        : zipPhase === "zipping"
+          ? "Zipping files…"
+          : "Done";
 
   return (
     <Tabs value={active} onValueChange={(v) => setActive(v as Lang)} className="w-full">
@@ -532,7 +562,7 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
           size="sm"
           className="h-9 gap-1.5 shrink-0"
           onClick={() => downloadSnippet(ep, active)}
-          disabled={zipping}
+          disabled={busy}
         >
           <Download className="w-3.5 h-3.5" />
           <span className="text-xs">File</span>
@@ -543,33 +573,35 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
           size="sm"
           className="h-9 gap-1.5 shrink-0"
           onClick={handleZip}
-          disabled={zipping}
+          disabled={busy}
+          aria-busy={busy}
         >
-          <Package className={`w-3.5 h-3.5 ${zipping ? "animate-pulse" : ""}`} />
+          <Package className={`w-3.5 h-3.5 ${busy ? "animate-pulse" : ""}`} />
           <span className="text-xs">
-            {zipping ? `${phaseLabel} ${zipPercent}%` : "All (.zip)"}
+            {busy ? `${phaseLabel}${cancelled || cancelling ? "" : ` ${zipPercent}%`}` : "All (.zip)"}
           </span>
         </Button>
-        {zipping && !cancelled && (
+        {busy && !cancelled && (
           <Button
             type="button"
             variant="destructive"
             size="sm"
             className="h-9 gap-1.5 shrink-0"
             onClick={handleCancel}
+            disabled={cancelling}
           >
             <X className="w-3.5 h-3.5" />
-            <span className="text-xs">Cancel</span>
+            <span className="text-xs">{cancelling ? "Cancelling…" : "Cancel"}</span>
           </Button>
         )}
       </div>
-      {zipping && (
+      {busy && (
         <div className="mt-2 space-y-1" role="status" aria-live="polite">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{phaseLabel}</span>
-            <span>{cancelled ? "—" : `${zipPercent}%`}</span>
+            <span>{cancelled || cancelling ? "—" : `${zipPercent}%`}</span>
           </div>
-          <Progress value={cancelled ? 0 : zipPercent} className="h-1.5" />
+          <Progress value={cancelled || cancelling ? 0 : zipPercent} className="h-1.5" />
         </div>
       )}
       {(["fetch", "node", "python", "sdk"] as Lang[]).map((l) => (
