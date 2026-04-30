@@ -384,10 +384,22 @@ function downloadSnippet(ep: Endpoint, lang: Lang) {
   URL.revokeObjectURL(url);
 }
 
+class CancelledError extends Error {
+  constructor() {
+    super("cancelled");
+    this.name = "CancelledError";
+  }
+}
+
 async function downloadAllSnippets(
   ep: Endpoint,
   onProgress?: (phase: "generating" | "zipping" | "done", percent: number) => void,
+  signal?: AbortSignal,
 ) {
+  const throwIfCancelled = () => {
+    if (signal?.aborted) throw new CancelledError();
+  };
+
   const zip = new JSZip();
   const slug = (ep.path.replace(/\//g, "") || "health").toLowerCase();
   const langs: { lang: Lang; ext: string; commentPrefix: string }[] = [
@@ -399,6 +411,7 @@ async function downloadAllSnippets(
 
   onProgress?.("generating", 0);
   for (let i = 0; i < langs.length; i++) {
+    throwIfCancelled();
     const { lang, ext, commentPrefix } = langs[i];
     const header = `${commentPrefix} NXA Web3 API — ${ep.method} ${ep.path}\n${commentPrefix} ${ep.title}\n${commentPrefix} ${ep.description}\n\n`;
     zip.file(`nxa-${slug}-${lang}.${ext}`, header + generateSnippet(ep, lang));
@@ -407,6 +420,7 @@ async function downloadAllSnippets(
     await new Promise((r) => setTimeout(r, 30));
   }
 
+  throwIfCancelled();
   zip.file(
     "README.md",
     `# NXA Web3 API — ${ep.method} ${ep.path}\n\n${ep.title}\n\n${ep.description}\n\n## Files\n\n- \`nxa-${slug}-fetch.ts\` — Browser fetch example\n- \`nxa-${slug}-node.ts\` — Node.js axios example\n- \`nxa-${slug}-python.py\` — Python requests example\n- \`nxa-${slug}-sdk.ts\` — Using the NexaCoin SDK\n`,
@@ -414,10 +428,33 @@ async function downloadAllSnippets(
   onProgress?.("generating", 100);
 
   onProgress?.("zipping", 0);
-  const blob = await zip.generateAsync({ type: "blob" }, (meta) => {
-    onProgress?.("zipping", Math.round(meta.percent));
-  });
+  const stream = zip.generateInternalStream({ type: "blob" });
+  const onAbort = () => stream.pause();
+  signal?.addEventListener("abort", onAbort);
 
+  let blob: Blob;
+  try {
+    blob = await new Promise<Blob>((resolve, reject) => {
+      stream
+        .on("data", (_data, meta) => {
+          if (signal?.aborted) {
+            stream.pause();
+            reject(new CancelledError());
+            return;
+          }
+          onProgress?.("zipping", Math.round(meta.percent));
+        })
+        .on("error", reject)
+        .on("end", () => {
+          // accumulate handled below via accumulate()
+        });
+      stream.accumulate().then(resolve, reject);
+    });
+  } finally {
+    signal?.removeEventListener("abort", onAbort);
+  }
+
+  throwIfCancelled();
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -434,25 +471,47 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
   const [zipping, setZipping] = useState(false);
   const [zipPhase, setZipPhase] = useState<"generating" | "zipping" | "done">("generating");
   const [zipPercent, setZipPercent] = useState(0);
+  const [cancelled, setCancelled] = useState(false);
+  const abortRef = useRef<AbortController | null>(null);
 
   const handleZip = async () => {
+    const controller = new AbortController();
+    abortRef.current = controller;
     setZipping(true);
+    setCancelled(false);
     setZipPhase("generating");
     setZipPercent(0);
     try {
-      await downloadAllSnippets(ep, (phase, percent) => {
-        setZipPhase(phase);
-        setZipPercent(percent);
-      });
+      await downloadAllSnippets(
+        ep,
+        (phase, percent) => {
+          setZipPhase(phase);
+          setZipPercent(percent);
+        },
+        controller.signal,
+      );
       // Brief moment to show 100% before hiding
       await new Promise((r) => setTimeout(r, 400));
+    } catch (err) {
+      if ((err as Error)?.name === "CancelledError") {
+        setCancelled(true);
+        await new Promise((r) => setTimeout(r, 800));
+      } else {
+        throw err;
+      }
     } finally {
+      abortRef.current = null;
       setZipping(false);
     }
   };
 
-  const phaseLabel =
-    zipPhase === "generating"
+  const handleCancel = () => {
+    abortRef.current?.abort();
+  };
+
+  const phaseLabel = cancelled
+    ? "Cancelled"
+    : zipPhase === "generating"
       ? "Generating snippets…"
       : zipPhase === "zipping"
         ? "Zipping files…"
@@ -491,14 +550,26 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
             {zipping ? `${phaseLabel} ${zipPercent}%` : "All (.zip)"}
           </span>
         </Button>
+        {zipping && !cancelled && (
+          <Button
+            type="button"
+            variant="destructive"
+            size="sm"
+            className="h-9 gap-1.5 shrink-0"
+            onClick={handleCancel}
+          >
+            <X className="w-3.5 h-3.5" />
+            <span className="text-xs">Cancel</span>
+          </Button>
+        )}
       </div>
       {zipping && (
         <div className="mt-2 space-y-1" role="status" aria-live="polite">
           <div className="flex items-center justify-between text-xs text-muted-foreground">
             <span>{phaseLabel}</span>
-            <span>{zipPercent}%</span>
+            <span>{cancelled ? "—" : `${zipPercent}%`}</span>
           </div>
-          <Progress value={zipPercent} className="h-1.5" />
+          <Progress value={cancelled ? 0 : zipPercent} className="h-1.5" />
         </div>
       )}
       {(["fetch", "node", "python", "sdk"] as Lang[]).map((l) => (
