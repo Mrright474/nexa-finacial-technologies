@@ -526,6 +526,21 @@ const ApiDocs = () => {
           </CardContent>
         </Card>
 
+        {/* SDK Quick-start */}
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Code2 className="w-4 h-4 text-primary" /> JavaScript SDK
+            </CardTitle>
+            <CardDescription>
+              Drop-in TypeScript client wrapping every endpoint. Copy the snippet, save as <code className="text-xs bg-muted px-1.5 py-0.5 rounded">nxa-sdk.ts</code>, and import.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CodeBlock code={SDK_BOOTSTRAP} language="typescript" />
+          </CardContent>
+        </Card>
+
         {/* Endpoints */}
         <div className="space-y-6">
           <div className="flex items-center gap-2">
