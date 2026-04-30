@@ -657,8 +657,14 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
         )}
 
         <div>
-          <p className="text-xs font-semibold text-foreground mb-2">Example Request</p>
+          <p className="text-xs font-semibold text-foreground mb-2">Example Request (curl)</p>
           <CodeBlock code={ep.curl} />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+            <Code2 className="w-3.5 h-3.5 text-primary" /> Code Snippets
+          </p>
+          <SnippetTabs ep={ep} />
         </div>
         <div>
           <p className="text-xs font-semibold text-foreground mb-2">Example Response</p>
