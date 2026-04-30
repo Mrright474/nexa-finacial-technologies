@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, Globe, Lock, Zap, Shield, BookOpen, Terminal } from "lucide-react";
+import { ArrowLeft, Copy, Check, Globe, Lock, Zap, Shield, BookOpen, Terminal, Code2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
@@ -243,6 +243,189 @@ const endpoints: Endpoint[] = [
   },
 ];
 
+// ─── SDK Snippet Generators ───
+
+type Lang = "fetch" | "node" | "python" | "sdk";
+
+function buildQuery(ep: Endpoint): string {
+  if (!ep.params || ep.params.length === 0) return "";
+  const sample = ep.params.map((p) => `${p.name}=${p.type === "number" ? "10" : "value"}`).join("&");
+  return `?${sample}`;
+}
+
+function buildBodyObject(ep: Endpoint): string {
+  if (!ep.bodyParams || ep.bodyParams.length === 0) return "{}";
+  const lines = ep.bodyParams.map((p) => {
+    const v = p.type === "number" ? "100" : `"${p.name === "recipient_id" ? "recipient-user-uuid" : "value"}"`;
+    return `  ${p.name}: ${v}`;
+  });
+  return `{\n${lines.join(",\n")}\n}`;
+}
+
+function buildPyDict(ep: Endpoint): string {
+  if (!ep.bodyParams || ep.bodyParams.length === 0) return "{}";
+  const lines = ep.bodyParams.map((p) => {
+    const v = p.type === "number" ? "100" : `"${p.name === "recipient_id" ? "recipient-user-uuid" : "value"}"`;
+    return `  "${p.name}": ${v}`;
+  });
+  return `{\n${lines.join(",\n")}\n}`;
+}
+
+function authHeadersJs(ep: Endpoint): string {
+  if (!ep.auth) return "";
+  if (ep.permissions?.includes("transfer")) {
+    return `    "Authorization": "Bearer " + JWT_TOKEN,\n`;
+  }
+  return `    "X-API-Key": API_KEY,\n`;
+}
+
+function authHeadersPy(ep: Endpoint): string {
+  if (!ep.auth) return "";
+  if (ep.permissions?.includes("transfer")) {
+    return `    "Authorization": f"Bearer {JWT_TOKEN}",\n`;
+  }
+  return `    "X-API-Key": API_KEY,\n`;
+}
+
+function generateSnippet(ep: Endpoint, lang: Lang): string {
+  const url = `${BASE_URL}${ep.path}${buildQuery(ep)}`;
+  const hasBody = ep.method === "POST";
+  const credDecl = ep.auth
+    ? ep.permissions?.includes("transfer")
+      ? `const JWT_TOKEN = "your_jwt_token_here";\n`
+      : `const API_KEY = "nxa_your_api_key_here";\n`
+    : "";
+  const credDeclPy = ep.auth
+    ? ep.permissions?.includes("transfer")
+      ? `JWT_TOKEN = "your_jwt_token_here"\n`
+      : `API_KEY = "nxa_your_api_key_here"\n`
+    : "";
+
+  if (lang === "fetch") {
+    return `${credDecl}
+const res = await fetch("${url}", {
+  method: "${ep.method}",
+  headers: {
+${authHeadersJs(ep)}    "Content-Type": "application/json",
+  },${hasBody ? `\n  body: JSON.stringify(${buildBodyObject(ep)}),` : ""}
+});
+const data = await res.json();
+console.log(data);`;
+  }
+
+  if (lang === "node") {
+    return `// npm install axios
+import axios from "axios";
+
+${credDecl}
+const { data } = await axios({
+  method: "${ep.method.toLowerCase()}",
+  url: "${url}",
+  headers: {
+${authHeadersJs(ep)}    "Content-Type": "application/json",
+  },${hasBody ? `\n  data: ${buildBodyObject(ep)},` : ""}
+});
+console.log(data);`;
+  }
+
+  if (lang === "python") {
+    return `# pip install requests
+import requests
+
+${credDeclPy}
+response = requests.${ep.method.toLowerCase()}(
+  "${url}",
+  headers={
+${authHeadersPy(ep)}    "Content-Type": "application/json",
+  },${hasBody ? `\n  json=${buildPyDict(ep)},` : ""}
+)
+print(response.json())`;
+  }
+
+  // SDK style
+  const fnName = ep.path.replace(/\//g, "").replace(/-/g, "_") || "health";
+  const args = hasBody && ep.bodyParams
+    ? `{ ${ep.bodyParams.map((p) => p.name).join(", ")} }`
+    : ep.params && ep.params.length
+      ? `{ ${ep.params.map((p) => p.name).join(", ")} }`
+      : "";
+  return `// Using the NexaCoin SDK
+import { NxaClient } from "@nexa/web3-sdk";
+
+const nxa = new NxaClient({
+  ${ep.auth ? (ep.permissions?.includes("transfer") ? 'jwt: "your_jwt_token"' : 'apiKey: "nxa_your_api_key"') : "// no auth required"}
+});
+
+const result = await nxa.${fnName}(${args});
+console.log(result);`;
+}
+
+function SnippetTabs({ ep }: { ep: Endpoint }) {
+  return (
+    <Tabs defaultValue="fetch" className="w-full">
+      <TabsList className="grid w-full grid-cols-4 h-9">
+        <TabsTrigger value="fetch" className="text-xs">JS Fetch</TabsTrigger>
+        <TabsTrigger value="node" className="text-xs">Node.js</TabsTrigger>
+        <TabsTrigger value="python" className="text-xs">Python</TabsTrigger>
+        <TabsTrigger value="sdk" className="text-xs">SDK</TabsTrigger>
+      </TabsList>
+      {(["fetch", "node", "python", "sdk"] as Lang[]).map((l) => (
+        <TabsContent key={l} value={l} className="mt-2">
+          <CodeBlock code={generateSnippet(ep, l)} language={l === "python" ? "python" : "javascript"} />
+        </TabsContent>
+      ))}
+    </Tabs>
+  );
+}
+
+const SDK_BOOTSTRAP = `// nxa-sdk.ts — drop into your project
+const BASE_URL = "${BASE_URL}";
+
+export interface NxaClientOptions {
+  apiKey?: string;
+  jwt?: string;
+}
+
+export class NxaClient {
+  private headers: Record<string, string>;
+
+  constructor(opts: NxaClientOptions = {}) {
+    this.headers = { "Content-Type": "application/json" };
+    if (opts.apiKey) this.headers["X-API-Key"] = opts.apiKey;
+    if (opts.jwt) this.headers["Authorization"] = \`Bearer \${opts.jwt}\`;
+  }
+
+  private async request<T>(method: string, path: string, body?: unknown, query?: Record<string, unknown>): Promise<T> {
+    const qs = query ? "?" + new URLSearchParams(query as Record<string, string>).toString() : "";
+    const res = await fetch(\`\${BASE_URL}\${path}\${qs}\`, {
+      method,
+      headers: this.headers,
+      body: body ? JSON.stringify(body) : undefined,
+    });
+    if (!res.ok) throw new Error(\`NXA API \${res.status}: \${await res.text()}\`);
+    return res.json() as Promise<T>;
+  }
+
+  health()       { return this.request("GET", "/health"); }
+  price()        { return this.request("GET", "/price"); }
+  supply()       { return this.request("GET", "/supply"); }
+  leaderboard(q: { limit?: number } = {}) { return this.request("GET", "/leaderboard", undefined, q); }
+  balance()      { return this.request("GET", "/balance"); }
+  burns(q: { limit?: number } = {})       { return this.request("GET", "/burns", undefined, q); }
+  trade(body: { amount: number; type?: string; from_currency?: string; to_currency?: string }) {
+    return this.request("POST", "/trade", body);
+  }
+  burn(body: { amount: number })          { return this.request("POST", "/burn", body); }
+  transfer(body: { amount: number; recipient_id: string }) {
+    return this.request("POST", "/transfer", body);
+  }
+}
+
+// Usage:
+// const nxa = new NxaClient({ apiKey: "nxa_..." });
+// const { balance } = await nxa.balance();
+`;
+
 const ApiDocs = () => {
   const navigate = useNavigate();
   const publicEndpoints = endpoints.filter((e) => !e.auth);
@@ -340,6 +523,21 @@ const ApiDocs = () => {
   "${BASE_URL}/balance"`} />
               </TabsContent>
             </Tabs>
+          </CardContent>
+        </Card>
+
+        {/* SDK Quick-start */}
+        <Card className="border-border">
+          <CardHeader>
+            <CardTitle className="text-base flex items-center gap-2">
+              <Code2 className="w-4 h-4 text-primary" /> JavaScript SDK
+            </CardTitle>
+            <CardDescription>
+              Drop-in TypeScript client wrapping every endpoint. Copy the snippet, save as <code className="text-xs bg-muted px-1.5 py-0.5 rounded">nxa-sdk.ts</code>, and import.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <CodeBlock code={SDK_BOOTSTRAP} language="typescript" />
           </CardContent>
         </Card>
 
@@ -459,8 +657,14 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
         )}
 
         <div>
-          <p className="text-xs font-semibold text-foreground mb-2">Example Request</p>
+          <p className="text-xs font-semibold text-foreground mb-2">Example Request (curl)</p>
           <CodeBlock code={ep.curl} />
+        </div>
+        <div>
+          <p className="text-xs font-semibold text-foreground mb-2 flex items-center gap-1.5">
+            <Code2 className="w-3.5 h-3.5 text-primary" /> Code Snippets
+          </p>
+          <SnippetTabs ep={ep} />
         </div>
         <div>
           <p className="text-xs font-semibold text-foreground mb-2">Example Response</p>
