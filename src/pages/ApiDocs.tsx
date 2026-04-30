@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
+import { Progress } from "@/components/ui/progress";
 
 const BASE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nxa-web3-api`;
 
@@ -383,7 +384,10 @@ function downloadSnippet(ep: Endpoint, lang: Lang) {
   URL.revokeObjectURL(url);
 }
 
-async function downloadAllSnippets(ep: Endpoint) {
+async function downloadAllSnippets(
+  ep: Endpoint,
+  onProgress?: (phase: "generating" | "zipping" | "done", percent: number) => void,
+) {
   const zip = new JSZip();
   const slug = (ep.path.replace(/\//g, "") || "health").toLowerCase();
   const langs: { lang: Lang; ext: string; commentPrefix: string }[] = [
@@ -393,17 +397,27 @@ async function downloadAllSnippets(ep: Endpoint) {
     { lang: "sdk", ext: "ts", commentPrefix: "//" },
   ];
 
-  for (const { lang, ext, commentPrefix } of langs) {
+  onProgress?.("generating", 0);
+  for (let i = 0; i < langs.length; i++) {
+    const { lang, ext, commentPrefix } = langs[i];
     const header = `${commentPrefix} NXA Web3 API — ${ep.method} ${ep.path}\n${commentPrefix} ${ep.title}\n${commentPrefix} ${ep.description}\n\n`;
     zip.file(`nxa-${slug}-${lang}.${ext}`, header + generateSnippet(ep, lang));
+    onProgress?.("generating", Math.round(((i + 1) / (langs.length + 1)) * 100));
+    // Yield to UI so the progress bar can render between files
+    await new Promise((r) => setTimeout(r, 30));
   }
 
   zip.file(
     "README.md",
     `# NXA Web3 API — ${ep.method} ${ep.path}\n\n${ep.title}\n\n${ep.description}\n\n## Files\n\n- \`nxa-${slug}-fetch.ts\` — Browser fetch example\n- \`nxa-${slug}-node.ts\` — Node.js axios example\n- \`nxa-${slug}-python.py\` — Python requests example\n- \`nxa-${slug}-sdk.ts\` — Using the NexaCoin SDK\n`,
   );
+  onProgress?.("generating", 100);
 
-  const blob = await zip.generateAsync({ type: "blob" });
+  onProgress?.("zipping", 0);
+  const blob = await zip.generateAsync({ type: "blob" }, (meta) => {
+    onProgress?.("zipping", Math.round(meta.percent));
+  });
+
   const url = URL.createObjectURL(blob);
   const a = document.createElement("a");
   a.href = url;
@@ -412,20 +426,37 @@ async function downloadAllSnippets(ep: Endpoint) {
   a.click();
   document.body.removeChild(a);
   URL.revokeObjectURL(url);
+  onProgress?.("done", 100);
 }
 
 function SnippetTabs({ ep }: { ep: Endpoint }) {
   const [active, setActive] = useState<Lang>("fetch");
   const [zipping, setZipping] = useState(false);
+  const [zipPhase, setZipPhase] = useState<"generating" | "zipping" | "done">("generating");
+  const [zipPercent, setZipPercent] = useState(0);
 
   const handleZip = async () => {
     setZipping(true);
+    setZipPhase("generating");
+    setZipPercent(0);
     try {
-      await downloadAllSnippets(ep);
+      await downloadAllSnippets(ep, (phase, percent) => {
+        setZipPhase(phase);
+        setZipPercent(percent);
+      });
+      // Brief moment to show 100% before hiding
+      await new Promise((r) => setTimeout(r, 400));
     } finally {
       setZipping(false);
     }
   };
+
+  const phaseLabel =
+    zipPhase === "generating"
+      ? "Generating snippets…"
+      : zipPhase === "zipping"
+        ? "Zipping files…"
+        : "Done";
 
   return (
     <Tabs value={active} onValueChange={(v) => setActive(v as Lang)} className="w-full">
@@ -442,6 +473,7 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
           size="sm"
           className="h-9 gap-1.5 shrink-0"
           onClick={() => downloadSnippet(ep, active)}
+          disabled={zipping}
         >
           <Download className="w-3.5 h-3.5" />
           <span className="text-xs">File</span>
@@ -454,10 +486,21 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
           onClick={handleZip}
           disabled={zipping}
         >
-          <Package className="w-3.5 h-3.5" />
-          <span className="text-xs">{zipping ? "Zipping…" : "All (.zip)"}</span>
+          <Package className={`w-3.5 h-3.5 ${zipping ? "animate-pulse" : ""}`} />
+          <span className="text-xs">
+            {zipping ? `${phaseLabel} ${zipPercent}%` : "All (.zip)"}
+          </span>
         </Button>
       </div>
+      {zipping && (
+        <div className="mt-2 space-y-1" role="status" aria-live="polite">
+          <div className="flex items-center justify-between text-xs text-muted-foreground">
+            <span>{phaseLabel}</span>
+            <span>{zipPercent}%</span>
+          </div>
+          <Progress value={zipPercent} className="h-1.5" />
+        </div>
+      )}
       {(["fetch", "node", "python", "sdk"] as Lang[]).map((l) => (
         <TabsContent key={l} value={l} className="mt-2">
           <CodeBlock code={generateSnippet(ep, l)} language={l === "python" ? "python" : "javascript"} />
