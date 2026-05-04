@@ -547,7 +547,7 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
     abortRef.current?.abort();
   };
 
-  const busy = zipping || cancelling;
+  const busy = zipping || cancelling || cancelled;
 
   const phaseLabel = cancelled
     ? "Cancelled"
