@@ -459,10 +459,22 @@ async function downloadAllSnippets(
   const a = document.createElement("a");
   a.href = url;
   a.download = `nxa-${slug}-snippets.zip`;
+  a.rel = "noopener";
   document.body.appendChild(a);
-  a.click();
-  document.body.removeChild(a);
-  URL.revokeObjectURL(url);
+  try {
+    // Final cancellation check before triggering the actual download
+    if (signal?.aborted) {
+      throw new CancelledError();
+    }
+    a.click();
+  } finally {
+    // Always clean up the anchor and revoke the blob URL so no stale
+    // download link can be reused after cancellation or completion.
+    a.removeAttribute("href");
+    a.removeAttribute("download");
+    if (a.parentNode) a.parentNode.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
   onProgress?.("done", 100);
 }
 
