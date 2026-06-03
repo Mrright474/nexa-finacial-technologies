@@ -1223,6 +1223,9 @@ function EndpointCard({ ep }: { ep: Endpoint }) {
           <SnippetTabs ep={ep} />
         </div>
         <div>
+          <TryIt ep={ep} />
+        </div>
+        <div>
           <p className="text-xs font-semibold text-foreground mb-2">Example Response</p>
           <CodeBlock code={ep.response} language="json" />
         </div>
