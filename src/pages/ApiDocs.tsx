@@ -877,6 +877,284 @@ const ApiDocs = () => {
   );
 };
 
+type TryResult = {
+  status: number;
+  ok: boolean;
+  latencyMs: number;
+  body: string;
+  contentType: string;
+};
+
+function TryIt({ ep }: { ep: Endpoint }) {
+  const [query, setQuery] = useState<Record<string, string>>(() =>
+    Object.fromEntries((ep.params ?? []).map((p) => [p.name, ""])),
+  );
+  const [body, setBody] = useState<Record<string, string>>(() =>
+    Object.fromEntries((ep.bodyParams ?? []).map((p) => [p.name, ""])),
+  );
+  const [apiKey, setApiKey] = useState("");
+  const [authMode, setAuthMode] = useState<"session" | "apikey">("session");
+  const [hasSession, setHasSession] = useState(false);
+  const [loading, setLoading] = useState(false);
+  const [result, setResult] = useState<TryResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const abortRef = useRef<AbortController | null>(null);
+
+  useEffect(() => {
+    supabase.auth.getSession().then(({ data }) => setHasSession(!!data.session));
+    const { data: sub } = supabase.auth.onAuthStateChange((_e, session) => {
+      setHasSession(!!session);
+    });
+    return () => sub.subscription.unsubscribe();
+  }, []);
+
+  const coerce = (raw: string, type: string) => {
+    if (raw === "") return undefined;
+    if (type === "number" || type === "integer") {
+      const n = Number(raw);
+      return Number.isFinite(n) ? n : raw;
+    }
+    if (type === "boolean") return raw === "true";
+    return raw;
+  };
+
+  const buildUrl = () => {
+    const url = new URL(`${BASE_URL}${ep.path}`);
+    (ep.params ?? []).forEach((p) => {
+      const v = query[p.name];
+      if (v) url.searchParams.set(p.name, v);
+    });
+    return url.toString();
+  };
+
+  const buildBody = () => {
+    if (!ep.bodyParams) return undefined;
+    const out: Record<string, unknown> = {};
+    ep.bodyParams.forEach((p) => {
+      const v = coerce(body[p.name] ?? "", p.type);
+      if (v !== undefined) out[p.name] = v;
+    });
+    return Object.keys(out).length ? JSON.stringify(out) : undefined;
+  };
+
+  const fillSample = () => {
+    const sample: Record<string, string> = {};
+    (ep.params ?? []).forEach((p) => {
+      sample[p.name] = p.type === "number" || p.type === "integer" ? "10" : "sample";
+    });
+    setQuery(sample);
+    const sampleBody: Record<string, string> = {};
+    (ep.bodyParams ?? []).forEach((p) => {
+      sampleBody[p.name] =
+        p.type === "number" || p.type === "integer"
+          ? "1"
+          : p.type === "boolean"
+            ? "true"
+            : p.name === "recipient_id"
+              ? "00000000-0000-0000-0000-000000000000"
+              : "sample";
+    });
+    setBody(sampleBody);
+  };
+
+  const send = async () => {
+    setError(null);
+    setResult(null);
+    setLoading(true);
+    const controller = new AbortController();
+    abortRef.current = controller;
+
+    const headers: Record<string, string> = { "Content-Type": "application/json" };
+    if (ep.auth) {
+      if (authMode === "session") {
+        const { data } = await supabase.auth.getSession();
+        const token = data.session?.access_token;
+        if (!token) {
+          setLoading(false);
+          setError("No active session. Sign in or switch to API Key mode.");
+          return;
+        }
+        headers["Authorization"] = `Bearer ${token}`;
+      } else {
+        if (!apiKey) {
+          setLoading(false);
+          setError("API key is required for this endpoint.");
+          return;
+        }
+        headers["X-API-Key"] = apiKey;
+      }
+    }
+
+    const started = performance.now();
+    try {
+      const reqBody = ep.method === "POST" ? buildBody() : undefined;
+      const res = await fetch(buildUrl(), {
+        method: ep.method,
+        headers,
+        body: reqBody,
+        signal: controller.signal,
+      });
+      const text = await res.text();
+      let pretty = text;
+      try {
+        pretty = JSON.stringify(JSON.parse(text), null, 2);
+      } catch {
+        /* not JSON */
+      }
+      setResult({
+        status: res.status,
+        ok: res.ok,
+        latencyMs: Math.round(performance.now() - started),
+        body: pretty,
+        contentType: res.headers.get("content-type") ?? "",
+      });
+    } catch (e) {
+      if ((e as Error).name === "AbortError") {
+        setError("Request cancelled.");
+      } else {
+        setError((e as Error).message || "Request failed.");
+      }
+    } finally {
+      setLoading(false);
+      abortRef.current = null;
+    }
+  };
+
+  const cancel = () => abortRef.current?.abort();
+
+  const statusClass = result?.ok
+    ? "bg-emerald-500/15 text-emerald-400 border-emerald-500/30"
+    : "bg-destructive/15 text-destructive border-destructive/30";
+
+  return (
+    <div className="rounded-lg border border-border bg-card/40 p-4 space-y-4">
+      <div className="flex items-center justify-between flex-wrap gap-2">
+        <div className="flex items-center gap-2">
+          <Wand2 className="w-4 h-4 text-primary" />
+          <p className="text-sm font-semibold text-foreground">Try it live</p>
+        </div>
+        <div className="flex items-center gap-2">
+          <Button type="button" variant="ghost" size="sm" className="h-8" onClick={fillSample}>
+            Fill sample
+          </Button>
+          {loading ? (
+            <Button type="button" variant="destructive" size="sm" className="h-8 gap-1.5" onClick={cancel}>
+              <X className="w-3.5 h-3.5" /> Cancel
+            </Button>
+          ) : (
+            <Button type="button" variant="gradient" size="sm" className="h-8 gap-1.5" onClick={send}>
+              <Play className="w-3.5 h-3.5" /> Send
+            </Button>
+          )}
+        </div>
+      </div>
+
+      {ep.auth && (
+        <Tabs value={authMode} onValueChange={(v) => setAuthMode(v as "session" | "apikey")}>
+          <TabsList className="h-8">
+            <TabsTrigger value="session" className="text-xs">
+              Session JWT {hasSession ? "✓" : ""}
+            </TabsTrigger>
+            <TabsTrigger value="apikey" className="text-xs">API Key</TabsTrigger>
+          </TabsList>
+          <TabsContent value="session" className="mt-2">
+            <p className="text-xs text-muted-foreground">
+              {hasSession
+                ? "Using your signed-in Lovable Cloud session token."
+                : "You are not signed in — switch to API Key or sign in to use session auth."}
+            </p>
+          </TabsContent>
+          <TabsContent value="apikey" className="mt-2 space-y-1">
+            <Label htmlFor={`apikey-${ep.path}`} className="text-xs">X-API-Key</Label>
+            <Input
+              id={`apikey-${ep.path}`}
+              type="password"
+              value={apiKey}
+              onChange={(e) => setApiKey(e.target.value)}
+              placeholder="nxa_..."
+              className="h-9 font-mono text-xs"
+            />
+          </TabsContent>
+        </Tabs>
+      )}
+
+      {ep.params && ep.params.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground">Query parameters</p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {ep.params.map((p) => (
+              <div key={p.name} className="space-y-1">
+                <Label htmlFor={`q-${ep.path}-${p.name}`} className="text-xs">
+                  <code className="text-primary">{p.name}</code>{" "}
+                  <span className="text-muted-foreground">({p.type})</span>
+                </Label>
+                <Input
+                  id={`q-${ep.path}-${p.name}`}
+                  value={query[p.name] ?? ""}
+                  onChange={(e) => setQuery({ ...query, [p.name]: e.target.value })}
+                  placeholder={p.required ? "required" : "optional"}
+                  className="h-9 text-xs"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {ep.bodyParams && ep.bodyParams.length > 0 && (
+        <div className="space-y-2">
+          <p className="text-xs font-semibold text-muted-foreground">Request body</p>
+          <div className="grid sm:grid-cols-2 gap-2">
+            {ep.bodyParams.map((p) => (
+              <div key={p.name} className="space-y-1">
+                <Label htmlFor={`b-${ep.path}-${p.name}`} className="text-xs">
+                  <code className="text-primary">{p.name}</code>{" "}
+                  <span className="text-muted-foreground">({p.type})</span>
+                </Label>
+                <Input
+                  id={`b-${ep.path}-${p.name}`}
+                  value={body[p.name] ?? ""}
+                  onChange={(e) => setBody({ ...body, [p.name]: e.target.value })}
+                  placeholder={p.required ? "required" : "optional"}
+                  className="h-9 text-xs"
+                />
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+
+      {loading && (
+        <div className="flex items-center gap-2 text-xs text-muted-foreground" role="status" aria-live="polite">
+          <Loader2 className="w-3.5 h-3.5 animate-spin" />
+          Sending request…
+        </div>
+      )}
+
+      {error && (
+        <div className="rounded-md border border-destructive/30 bg-destructive/10 px-3 py-2 text-xs text-destructive">
+          {error}
+        </div>
+      )}
+
+      {result && (
+        <div className="space-y-2">
+          <div className="flex items-center gap-2 flex-wrap">
+            <Badge variant="outline" className={`${statusClass} font-mono text-[10px]`}>
+              {result.status} {result.ok ? "OK" : "ERROR"}
+            </Badge>
+            <span className="text-[11px] text-muted-foreground">{result.latencyMs} ms</span>
+            {result.contentType && (
+              <span className="text-[11px] text-muted-foreground truncate">{result.contentType}</span>
+            )}
+          </div>
+          <CodeBlock code={result.body || "(empty body)"} language="json" />
+        </div>
+      )}
+    </div>
+  );
+}
+
 function EndpointCard({ ep }: { ep: Endpoint }) {
   return (
     <AccordionItem value={ep.method + ep.path} className="border border-border rounded-lg overflow-hidden">
