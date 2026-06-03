@@ -620,6 +620,20 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
             <span className="text-xs">{cancelling ? "Cancelling…" : "Cancel"}</span>
           </Button>
         )}
+        {canRetry && (
+          <Button
+            type="button"
+            variant="gradient"
+            size="sm"
+            className="h-9 gap-1.5 shrink-0"
+            onClick={handleRetry}
+            disabled={busy || !canRetry}
+            aria-label="Download again after cancellation"
+          >
+            <Package className="w-3.5 h-3.5" />
+            <span className="text-xs">Download again</span>
+          </Button>
+        )}
       </div>
       {busy && (
         <div className="mt-2 space-y-1" role="status" aria-live="polite">
