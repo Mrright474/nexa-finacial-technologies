@@ -1,6 +1,6 @@
-import { useState, useRef } from "react";
+import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { ArrowLeft, Copy, Check, Globe, Lock, Zap, Shield, BookOpen, Terminal, Code2, Download, Package, X } from "lucide-react";
+import { ArrowLeft, Copy, Check, Globe, Lock, Zap, Shield, BookOpen, Terminal, Code2, Download, Package, X, Play, Loader2, Wand2 } from "lucide-react";
 import JSZip from "jszip";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
@@ -8,6 +8,9 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Accordion, AccordionContent, AccordionItem, AccordionTrigger } from "@/components/ui/accordion";
 import { Progress } from "@/components/ui/progress";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import { supabase } from "@/integrations/supabase/client";
 
 const BASE_URL = `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/nxa-web3-api`;
 
