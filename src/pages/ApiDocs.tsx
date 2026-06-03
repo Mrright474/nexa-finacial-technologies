@@ -485,6 +485,7 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
   const [zipPhase, setZipPhase] = useState<"generating" | "zipping" | "done">("generating");
   const [zipPercent, setZipPercent] = useState(0);
   const [cancelled, setCancelled] = useState(false);
+  const [canRetry, setCanRetry] = useState(false);
   const abortRef = useRef<AbortController | null>(null);
 
   const resetZipState = () => {
@@ -496,10 +497,7 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
     abortRef.current = null;
   };
 
-  const handleZip = async () => {
-    // Guard against re-entry while a previous job is still tearing down
-    if (zipping || cancelling || abortRef.current) return;
-
+  const startZip = async () => {
     const controller = new AbortController();
     abortRef.current = controller;
     setZipping(true);
@@ -539,6 +537,22 @@ function SnippetTabs({ ep }: { ep: Endpoint }) {
     }
 
     resetZipState();
+    // Only after the UI has fully reset do we expose the explicit
+    // "Download again" affordance to the user.
+    if (wasCancelled) setCanRetry(true);
+  };
+
+  const handleZip = async () => {
+    // Guard against re-entry while a previous job is still tearing down
+    if (zipping || cancelling || abortRef.current) return;
+    setCanRetry(false);
+    await startZip();
+  };
+
+  const handleRetry = async () => {
+    if (zipping || cancelling || abortRef.current || !canRetry) return;
+    setCanRetry(false);
+    await startZip();
   };
 
   const handleCancel = () => {
