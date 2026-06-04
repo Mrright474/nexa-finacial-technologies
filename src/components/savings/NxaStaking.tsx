@@ -67,32 +67,14 @@ export default function NxaStaking() {
     if (amount > nxaBalance) return toast.error('Insufficient NXA balance');
 
     const tier = STAKING_TIERS[selectedTier];
-    const endDate = new Date();
-    endDate.setDate(endDate.getDate() + tier.days);
 
-    // Deduct from wallet
-    const { error: walletError } = await supabase
-      .from('wallets')
-      .update({ balance: nxaBalance - amount })
-      .eq('currency', 'NXA')
-      .eq('user_id', user!.id);
-
-    if (walletError) return toast.error('Failed to deduct balance');
-
-    // Create stake
-    const { error } = await supabase.from('nxa_stakes').insert({
-      user_id: user!.id,
-      amount,
-      lock_period_days: tier.days,
-      apy: tier.apy,
-      end_date: endDate.toISOString(),
+    const { error } = await supabase.rpc('stake_nxa' as any, {
+      p_amount: amount,
+      p_lock_period_days: tier.days,
+      p_apy: tier.apy,
     });
 
-    if (error) {
-      // Revert wallet
-      await supabase.from('wallets').update({ balance: nxaBalance }).eq('currency', 'NXA').eq('user_id', user!.id);
-      return toast.error('Failed to create stake');
-    }
+    if (error) return toast.error(error.message || 'Failed to create stake');
 
     toast.success(`Staked ${amount} NXA for ${tier.label} at ${tier.apy}% APY`);
     setStakeAmount('');
@@ -109,22 +91,14 @@ export default function NxaStaking() {
       return;
     }
 
-    const totalReturn = stake.amount + stake.earned_rewards;
+    const { error } = await supabase.rpc('unstake_nxa' as any, { p_stake_id: stake.id });
+    if (error) return toast.error(error.message || 'Failed to return funds');
 
-    // Return to wallet
-    const { error: walletError } = await supabase
-      .from('wallets')
-      .update({ balance: nxaBalance + totalReturn })
-      .eq('currency', 'NXA')
-      .eq('user_id', user!.id);
-
-    if (walletError) return toast.error('Failed to return funds');
-
-    await supabase.from('nxa_stakes').update({ status: 'completed' }).eq('id', stake.id);
     toast.success(`Unstaked ${stake.amount} NXA + ${stake.earned_rewards.toFixed(2)} NXA rewards!`);
     fetchStakes();
     fetchNxaBalance();
   };
+
 
   const totalStaked = stakes.filter(s => s.status === 'active').reduce((a, s) => a + Number(s.amount), 0);
   const totalRewards = stakes.filter(s => s.status === 'active').reduce((a, s) => a + Number(s.earned_rewards), 0);
