@@ -34,7 +34,7 @@ export function useWallet() {
 
   const fetchWallets = async (): Promise<Wallet[]> => {
     if (!user) return [];
-    
+
     const { data, error } = await supabase
       .from('wallets')
       .select('*')
@@ -50,7 +50,7 @@ export function useWallet() {
 
   const fetchTransactions = async (limit = 20): Promise<Transaction[]> => {
     if (!user) return [];
-    
+
     const { data, error } = await supabase
       .from('transactions')
       .select('*')
@@ -70,61 +70,21 @@ export function useWallet() {
     setLoading(true);
 
     try {
-      // Get current wallet
-      const { data: wallet, error: walletError } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('currency', currency)
-        .single();
-
-      if (walletError) {
-        // Create wallet if it doesn't exist
-        const { error: createError } = await supabase
-          .from('wallets')
-          .insert({
-            user_id: user.id,
-            currency,
-            balance: amount,
-            wallet_type: ['BTC', 'ETH', 'USDT', 'USDC'].includes(currency) ? 'crypto' : 'fiat'
-          });
-
-        if (createError) throw createError;
-      } else {
-        // Update existing wallet
-        const { error: updateError } = await supabase
-          .from('wallets')
-          .update({ balance: Number(wallet.balance) + amount })
-          .eq('id', wallet.id);
-
-        if (updateError) throw updateError;
-      }
-
-      // Record transaction
-      const { error: txError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          transaction_type: 'deposit',
-          amount,
-          currency,
-          status: 'completed',
-          description: `Deposited ${currency} ${amount.toLocaleString()}`
-        });
-
-      if (txError) throw txError;
+      const { error } = await supabase.rpc('wallet_credit' as any, {
+        p_currency: currency,
+        p_amount: amount,
+        p_description: `Deposited ${currency} ${amount.toLocaleString()}`,
+        p_tx_type: 'deposit',
+      });
+      if (error) throw error;
 
       toast({
-        title: "Deposit Successful",
-        description: `${currency} ${amount.toLocaleString()} has been added to your wallet.`
+        title: 'Deposit Successful',
+        description: `${currency} ${amount.toLocaleString()} has been added to your wallet.`,
       });
       return true;
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Deposit Failed",
-        description: error.message
-      });
+      toast({ variant: 'destructive', title: 'Deposit Failed', description: error.message });
       return false;
     } finally {
       setLoading(false);
@@ -136,55 +96,21 @@ export function useWallet() {
     setLoading(true);
 
     try {
-      // Get current wallet
-      const { data: wallet, error: walletError } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('currency', currency)
-        .single();
-
-      if (walletError || !wallet) {
-        throw new Error('Wallet not found');
-      }
-
-      if (Number(wallet.balance) < amount) {
-        throw new Error('Insufficient balance');
-      }
-
-      // Update wallet balance
-      const { error: updateError } = await supabase
-        .from('wallets')
-        .update({ balance: Number(wallet.balance) - amount })
-        .eq('id', wallet.id);
-
-      if (updateError) throw updateError;
-
-      // Record transaction
-      const { error: txError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          transaction_type: 'withdraw',
-          amount,
-          currency,
-          status: 'completed',
-          description: `Withdrew ${currency} ${amount.toLocaleString()}`
-        });
-
-      if (txError) throw txError;
+      const { error } = await supabase.rpc('wallet_debit' as any, {
+        p_currency: currency,
+        p_amount: amount,
+        p_description: `Withdrew ${currency} ${amount.toLocaleString()}`,
+        p_tx_type: 'withdraw',
+      });
+      if (error) throw error;
 
       toast({
-        title: "Withdrawal Successful",
-        description: `${currency} ${amount.toLocaleString()} has been withdrawn.`
+        title: 'Withdrawal Successful',
+        description: `${currency} ${amount.toLocaleString()} has been withdrawn.`,
       });
       return true;
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Withdrawal Failed",
-        description: error.message
-      });
+      toast({ variant: 'destructive', title: 'Withdrawal Failed', description: error.message });
       return false;
     } finally {
       setLoading(false);
@@ -201,136 +127,21 @@ export function useWallet() {
     setLoading(true);
 
     try {
-      // Find recipient by email
-      const { data: recipientProfile, error: recipientError } = await supabase
-        .from('profiles')
-        .select('user_id, first_name, last_name, email')
-        .eq('email', recipientEmail)
-        .single();
-
-      if (recipientError || !recipientProfile) {
-        throw new Error('Recipient not found');
-      }
-
-      if (recipientProfile.user_id === user.id) {
-        throw new Error('Cannot transfer to yourself');
-      }
-
-      // Get sender wallet
-      const { data: senderWallet, error: senderWalletError } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', user.id)
-        .eq('currency', currency)
-        .single();
-
-      if (senderWalletError || !senderWallet) {
-        throw new Error('Sender wallet not found');
-      }
-
-      if (Number(senderWallet.balance) < amount) {
-        throw new Error('Insufficient balance');
-      }
-
-      // Get or create recipient wallet
-      let recipientWallet;
-      const { data: existingRecipientWallet } = await supabase
-        .from('wallets')
-        .select('*')
-        .eq('user_id', recipientProfile.user_id)
-        .eq('currency', currency)
-        .single();
-
-      if (!existingRecipientWallet) {
-        // Create wallet for recipient
-        const { data: newWallet, error: createError } = await supabase
-          .from('wallets')
-          .insert({
-            user_id: recipientProfile.user_id,
-            currency,
-            balance: 0,
-            wallet_type: ['BTC', 'ETH', 'USDT', 'USDC'].includes(currency) ? 'crypto' : 'fiat'
-          })
-          .select()
-          .single();
-
-        if (createError) throw createError;
-        recipientWallet = newWallet;
-      } else {
-        recipientWallet = existingRecipientWallet;
-      }
-
-      // Deduct from sender
-      const { error: deductError } = await supabase
-        .from('wallets')
-        .update({ balance: Number(senderWallet.balance) - amount })
-        .eq('id', senderWallet.id);
-
-      if (deductError) throw deductError;
-
-      // Add to recipient
-      const { error: addError } = await supabase
-        .from('wallets')
-        .update({ balance: Number(recipientWallet.balance) + amount })
-        .eq('id', recipientWallet.id);
-
-      if (addError) throw addError;
-
-      const recipientName = `${recipientProfile.first_name || ''} ${recipientProfile.last_name || ''}`.trim() || recipientEmail;
-
-      // Record sender transaction
-      const { error: senderTxError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: user.id,
-          transaction_type: 'send',
-          amount,
-          currency,
-          status: 'completed',
-          description: note || `Transfer to ${recipientName}`,
-          recipient_id: recipientProfile.user_id,
-          recipient_name: recipientName
-        });
-
-      if (senderTxError) throw senderTxError;
-
-      // Record recipient transaction
-      const { data: senderProfile } = await supabase
-        .from('profiles')
-        .select('first_name, last_name, email')
-        .eq('user_id', user.id)
-        .single();
-
-      const senderName = senderProfile 
-        ? `${senderProfile.first_name || ''} ${senderProfile.last_name || ''}`.trim() || senderProfile.email
-        : 'Unknown';
-
-      const { error: recipientTxError } = await supabase
-        .from('transactions')
-        .insert({
-          user_id: recipientProfile.user_id,
-          transaction_type: 'receive',
-          amount,
-          currency,
-          status: 'completed',
-          description: note || `Received from ${senderName}`,
-          recipient_id: user.id,
-          recipient_name: senderName
-        });
-
-      if (recipientTxError) throw recipientTxError;
+      const { error } = await supabase.rpc('wallet_transfer' as any, {
+        p_recipient_email: recipientEmail,
+        p_currency: currency,
+        p_amount: amount,
+        p_note: note ?? null,
+      });
+      if (error) throw error;
 
       toast({
-        title: "Transfer Successful",
-        description: `${currency} ${amount.toLocaleString()} sent to ${recipientName}`
+        title: 'Transfer Successful',
+        description: `${currency} ${amount.toLocaleString()} sent to ${recipientEmail}`,
       });
       return true;
     } catch (error: any) {
-      toast({
-        variant: "destructive",
-        title: "Transfer Failed",
-        description: error.message
-      });
+      toast({ variant: 'destructive', title: 'Transfer Failed', description: error.message });
       return false;
     } finally {
       setLoading(false);
@@ -348,7 +159,7 @@ export function useWallet() {
           user_id: user.id,
           currency,
           balance: 0,
-          wallet_type: 'crypto'
+          wallet_type: 'crypto',
         });
 
       if (error) {
@@ -359,15 +170,15 @@ export function useWallet() {
       }
 
       toast({
-        title: "Wallet Created",
-        description: `${currency} wallet has been added.`
+        title: 'Wallet Created',
+        description: `${currency} wallet has been added.`,
       });
       return true;
     } catch (error: any) {
       toast({
-        variant: "destructive",
-        title: "Failed to Create Wallet",
-        description: error.message
+        variant: 'destructive',
+        title: 'Failed to Create Wallet',
+        description: error.message,
       });
       return false;
     } finally {
@@ -382,6 +193,6 @@ export function useWallet() {
     deposit,
     withdraw,
     transfer,
-    addCryptoWallet
+    addCryptoWallet,
   };
 }

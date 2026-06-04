@@ -44,57 +44,18 @@ export function LoanApplicationForm({ userId, nxaBalance, nxaPrice, onSuccess }:
 
     setApplying(true);
     try {
-      const dueDate = new Date();
-      dueDate.setDate(dueDate.getDate() + selectedTerm);
-
-      // Lock collateral (deduct from NXA wallet)
-      const newBalance = nxaBalance - requiredNxa;
-      const { error: walletErr } = await supabase
-        .from('wallets')
-        .update({ balance: newBalance })
-        .eq('user_id', userId)
-        .eq('currency', 'NXA');
-      if (walletErr) throw walletErr;
-
-      // Create loan
-      const { error: loanErr } = await supabase.from('loans').insert({
-        user_id: userId,
-        loan_amount: parsedAmount,
-        loan_currency: 'USD',
-        collateral_amount: requiredNxa,
-        collateral_currency: 'NXA',
-        collateral_ratio: selectedRatio,
-        interest_rate: option.apr,
-        term_days: selectedTerm,
-        monthly_payment: monthlyPayment,
-        remaining_balance: totalRepayment,
-        status: 'active',
-        approved_at: new Date().toISOString(),
-        due_date: dueDate.toISOString(),
+      const { error } = await supabase.rpc('loan_apply' as any, {
+        p_loan_amount: parsedAmount,
+        p_loan_currency: 'USD',
+        p_collateral_amount: requiredNxa,
+        p_collateral_currency: 'NXA',
+        p_collateral_ratio: selectedRatio,
+        p_interest_rate: option.apr,
+        p_term_days: selectedTerm,
+        p_monthly_payment: monthlyPayment,
+        p_total_repayment: totalRepayment,
       });
-      if (loanErr) throw loanErr;
-
-      // Credit USD to wallet
-      const { data: usdWallet } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', userId)
-        .eq('currency', 'USD')
-        .single();
-
-      if (usdWallet) {
-        await supabase.from('wallets').update({ balance: Number(usdWallet.balance) + parsedAmount }).eq('user_id', userId).eq('currency', 'USD');
-      }
-
-      // Record transaction
-      await supabase.from('transactions').insert({
-        user_id: userId,
-        amount: parsedAmount,
-        currency: 'USD',
-        transaction_type: 'receive',
-        status: 'completed',
-        description: `Loan disbursement — ${requiredNxa.toFixed(2)} NXA collateral (${selectedRatio}x)`,
-      });
+      if (error) throw error;
 
       toast.success(`Loan approved! $${parsedAmount.toLocaleString()} credited to your wallet`);
       setLoanAmount('');
@@ -105,6 +66,7 @@ export function LoanApplicationForm({ userId, nxaBalance, nxaPrice, onSuccess }:
       setApplying(false);
     }
   };
+
 
   return (
     <div className="glass-card p-6 space-y-5 animate-slide-up delay-100">

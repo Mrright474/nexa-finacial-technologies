@@ -50,75 +50,13 @@ export function ActiveLoans({ loans, loading, nxaPrice, onRepaid }: Props) {
 
     setProcessing(true);
     try {
-      // Check USD balance
-      const { data: usdWallet } = await supabase
-        .from('wallets')
-        .select('balance')
-        .eq('user_id', loan.user_id)
-        .eq('currency', 'USD')
-        .single();
-
-      const usdBalance = Number(usdWallet?.balance || 0);
-      if (amount > usdBalance) {
-        toast.error(`Insufficient USD balance ($${usdBalance.toFixed(2)})`);
-        setProcessing(false);
-        return;
-      }
+      const { data: isFullyPaid, error } = await supabase.rpc('loan_repay' as any, {
+        p_loan_id: loan.id,
+        p_amount: amount,
+      });
+      if (error) throw error;
 
       const newRemaining = loan.remaining_balance - amount;
-      const isFullyPaid = newRemaining <= 0.01;
-
-      // 1. Deduct USD
-      await supabase
-        .from('wallets')
-        .update({ balance: usdBalance - amount })
-        .eq('user_id', loan.user_id)
-        .eq('currency', 'USD');
-
-      // 2. Update loan
-      await supabase
-        .from('loans')
-        .update({
-          remaining_balance: isFullyPaid ? 0 : newRemaining,
-          status: isFullyPaid ? 'paid' : 'active',
-        })
-        .eq('id', loan.id);
-
-      // 3. If fully paid, unlock collateral
-      if (isFullyPaid) {
-        const { data: nxaWallet } = await supabase
-          .from('wallets')
-          .select('balance')
-          .eq('user_id', loan.user_id)
-          .eq('currency', 'NXA')
-          .single();
-
-        await supabase
-          .from('wallets')
-          .update({ balance: Number(nxaWallet?.balance || 0) + loan.collateral_amount })
-          .eq('user_id', loan.user_id)
-          .eq('currency', 'NXA');
-
-        await supabase.from('transactions').insert({
-          user_id: loan.user_id,
-          amount: loan.collateral_amount,
-          currency: 'NXA',
-          transaction_type: 'receive',
-          status: 'completed',
-          description: `Collateral unlocked — ${loan.collateral_amount.toFixed(2)} NXA returned after loan repayment`,
-        });
-      }
-
-      // 4. Record repayment transaction
-      await supabase.from('transactions').insert({
-        user_id: loan.user_id,
-        amount,
-        currency: 'USD',
-        transaction_type: 'send',
-        status: 'completed',
-        description: `Loan repayment${isFullyPaid ? ' (fully paid)' : ''} — $${amount.toFixed(2)}`,
-      });
-
       toast.success(isFullyPaid
         ? `Loan fully repaid! ${loan.collateral_amount.toFixed(2)} NXA unlocked`
         : `Repaid $${amount.toFixed(2)} — $${newRemaining.toFixed(2)} remaining`
@@ -133,6 +71,7 @@ export function ActiveLoans({ loans, loading, nxaPrice, onRepaid }: Props) {
       setProcessing(false);
     }
   };
+
 
   if (loading) {
     return (

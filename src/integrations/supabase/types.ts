@@ -835,6 +835,10 @@ export type Database = {
       [_ in never]: never
     }
     Functions: {
+      _ensure_wallet: {
+        Args: { p_currency: string; p_user_id: string }
+        Returns: string
+      }
       check_account_lockout: {
         Args: { p_email: string }
         Returns: {
@@ -886,6 +890,24 @@ export type Database = {
         }
         Returns: boolean
       }
+      loan_apply: {
+        Args: {
+          p_collateral_amount: number
+          p_collateral_currency: string
+          p_collateral_ratio: number
+          p_interest_rate: number
+          p_loan_amount: number
+          p_loan_currency: string
+          p_monthly_payment: number
+          p_term_days: number
+          p_total_repayment: number
+        }
+        Returns: string
+      }
+      loan_repay: {
+        Args: { p_amount: number; p_loan_id: string }
+        Returns: boolean
+      }
       record_failed_login: {
         Args: {
           p_email: string
@@ -906,6 +928,49 @@ export type Database = {
           should_block: boolean
           unique_emails: number
         }[]
+      }
+      stake_nxa: {
+        Args: { p_amount: number; p_apy: number; p_lock_period_days: number }
+        Returns: string
+      }
+      unstake_nxa: { Args: { p_stake_id: string }; Returns: number }
+      wallet_credit: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_description?: string
+          p_tx_type?: string
+        }
+        Returns: number
+      }
+      wallet_debit: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_description?: string
+          p_tx_type?: string
+        }
+        Returns: number
+      }
+      wallet_swap: {
+        Args: {
+          p_description?: string
+          p_fee?: number
+          p_from_amount: number
+          p_from_currency: string
+          p_to_amount: number
+          p_to_currency: string
+        }
+        Returns: string
+      }
+      wallet_transfer: {
+        Args: {
+          p_amount: number
+          p_currency: string
+          p_note?: string
+          p_recipient_email: string
+        }
+        Returns: undefined
       }
     }
     Enums: {
