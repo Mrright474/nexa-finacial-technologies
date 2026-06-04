@@ -99,49 +99,16 @@ export default function Swap() {
 
     setSwapping(true);
     try {
-      // Deduct from source wallet
-      const newFromBalance = fromBalance - parsedFromAmount;
-      const { error: fromErr } = await supabase
-        .from('wallets')
-        .update({ balance: newFromBalance })
-        .eq('user_id', user.id)
-        .eq('currency', fromCurrency);
-      if (fromErr) throw fromErr;
-
-      // Add to destination wallet (create if doesn't exist)
-      const toBalance = wallets[toCurrency] || 0;
-      const { data: existingWallet } = await supabase
-        .from('wallets')
-        .select('id')
-        .eq('user_id', user.id)
-        .eq('currency', toCurrency)
-        .single();
-
-      if (existingWallet) {
-        const { error: toErr } = await supabase
-          .from('wallets')
-          .update({ balance: toBalance + toAmount })
-          .eq('user_id', user.id)
-          .eq('currency', toCurrency);
-        if (toErr) throw toErr;
-      } else {
-        const walletType = SUPPORTED_CURRENCIES.find(c => c.symbol === toCurrency)?.type === 'fiat' ? 'fiat' : 'crypto';
-        const { error: createErr } = await supabase
-          .from('wallets')
-          .insert({ user_id: user.id, currency: toCurrency, balance: toAmount, wallet_type: walletType });
-        if (createErr) throw createErr;
-      }
-
-      // Record transaction
-      const { data: txData } = await supabase.from('transactions').insert({
-        user_id: user.id,
-        amount: parsedFromAmount,
-        currency: fromCurrency,
-        transaction_type: 'swap',
-        status: 'completed',
-        fee: fee * (toPrice || 1),
-        description: `Swapped ${parsedFromAmount} ${fromCurrency} → ${toAmount.toFixed(4)} ${toCurrency}`,
-      }).select('id').single();
+      const description = `Swapped ${parsedFromAmount} ${fromCurrency} → ${toAmount.toFixed(4)} ${toCurrency}`;
+      const { data: txId, error: swapErr } = await supabase.rpc('wallet_swap' as any, {
+        p_from_currency: fromCurrency,
+        p_to_currency: toCurrency,
+        p_from_amount: parsedFromAmount,
+        p_to_amount: toAmount,
+        p_fee: fee * (toPrice || 1),
+        p_description: description,
+      });
+      if (swapErr) throw swapErr;
 
       // Get burn rate from settings
       const { data: settingsData } = await supabase
@@ -154,12 +121,10 @@ export default function Swap() {
       const nxaPrice = prices['NXA']?.usd || 1;
 
       if (fromCurrency === 'NXA') {
-        // Fee is in toCurrency units; convert to NXA
         nxaBurnAmount = (fee * (toPrice || 1) / nxaPrice) * BURN_RATE;
       } else if (toCurrency === 'NXA') {
         nxaBurnAmount = fee * BURN_RATE;
       } else {
-        // Neither side is NXA — convert fee USD value to NXA
         nxaBurnAmount = (fee * (toPrice || 1) / nxaPrice) * BURN_RATE;
       }
 
@@ -168,9 +133,10 @@ export default function Swap() {
           user_id: user.id,
           amount: nxaBurnAmount,
           source: 'swap_fee',
-          transaction_id: txData?.id || null,
+          transaction_id: (txId as any) || null,
         });
       }
+
 
       toast.success(`Swapped ${parsedFromAmount} ${fromCurrency} → ${toAmount.toFixed(4)} ${toCurrency}`);
       setFromAmount('');
