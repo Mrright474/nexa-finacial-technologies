@@ -761,6 +761,57 @@ export type Database = {
         }
         Relationships: []
       }
+      wallet_ledger: {
+        Row: {
+          actor_user_id: string | null
+          balance_after: number
+          balance_before: number
+          change_amount: number
+          counterparty_user_id: string | null
+          created_at: string
+          currency: string
+          id: string
+          loan_id: string | null
+          metadata: Json | null
+          source: string
+          stake_id: string | null
+          transaction_id: string | null
+          user_id: string
+        }
+        Insert: {
+          actor_user_id?: string | null
+          balance_after: number
+          balance_before: number
+          change_amount: number
+          counterparty_user_id?: string | null
+          created_at?: string
+          currency: string
+          id?: string
+          loan_id?: string | null
+          metadata?: Json | null
+          source: string
+          stake_id?: string | null
+          transaction_id?: string | null
+          user_id: string
+        }
+        Update: {
+          actor_user_id?: string | null
+          balance_after?: number
+          balance_before?: number
+          change_amount?: number
+          counterparty_user_id?: string | null
+          created_at?: string
+          currency?: string
+          id?: string
+          loan_id?: string | null
+          metadata?: Json | null
+          source?: string
+          stake_id?: string | null
+          transaction_id?: string | null
+          user_id?: string
+        }
+        Relationships: []
+      }
       wallets: {
         Row: {
           balance: number
@@ -838,6 +889,22 @@ export type Database = {
       _ensure_wallet: {
         Args: { p_currency: string; p_user_id: string }
         Returns: string
+      }
+      _record_wallet_ledger: {
+        Args: {
+          p_balance_after: number
+          p_balance_before: number
+          p_change: number
+          p_counterparty?: string
+          p_currency: string
+          p_loan_id?: string
+          p_metadata?: Json
+          p_source: string
+          p_stake_id?: string
+          p_transaction_id?: string
+          p_user_id: string
+        }
+        Returns: undefined
       }
       check_account_lockout: {
         Args: { p_email: string }
