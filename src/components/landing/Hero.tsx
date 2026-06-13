@@ -54,12 +54,6 @@ export function Hero() {
                   Start Free <ArrowRight className="w-5 h-5" />
                 </Button>
               </Link>
-              <Button 
-                variant="glass" 
-                size="xl" 
-                className="gap-2"
-                onClick={() => setShowDemo(true)}
-              >
               <Button
                 variant="glass"
                 size="xl"
