@@ -1,6 +1,7 @@
 import { useState } from 'react';
 import { Button } from '@/components/ui/button';
-import { ArrowRight, Play, Shield, Zap, Globe, X } from 'lucide-react';
+import { ArrowRight, Play, Shield, Zap, Globe, X, Gem } from 'lucide-react';
+import { LEGACY_VERSE_URL, LEGACY_VERSE_LABEL, LEGACY_VERSE_ARIA } from '@/config/externalLinks';
 import { Link } from 'react-router-dom';
 import { NexaCard } from '@/components/cards/NexaCard';
 import { Dialog, DialogContent } from '@/components/ui/dialog';
