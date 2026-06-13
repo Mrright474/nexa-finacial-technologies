@@ -60,8 +60,24 @@ export function Hero() {
                 className="gap-2"
                 onClick={() => setShowDemo(true)}
               >
+              <Button
+                variant="glass"
+                size="xl"
+                className="gap-2"
+                onClick={() => setShowDemo(true)}
+              >
                 <Play className="w-5 h-5" /> Watch Demo
               </Button>
+              <a
+                href={LEGACY_VERSE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={LEGACY_VERSE_ARIA}
+              >
+                <Button variant="outline" size="xl" className="gap-2">
+                  <Gem className="w-5 h-5" /> {LEGACY_VERSE_LABEL}
+                </Button>
+              </a>
             </div>
 
             <div className="flex items-center gap-8 pt-4">
