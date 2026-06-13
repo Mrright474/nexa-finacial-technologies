@@ -423,6 +423,17 @@ export function Navbar() {
                 </a>
               )
             )}
+            <a
+              href={LEGACY_VERSE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={LEGACY_VERSE_ARIA}
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors text-sm font-semibold py-2"
+            >
+              <Gem className="w-4 h-4" /> {LEGACY_VERSE_LABEL}
+              <ExternalLink className="w-3 h-3 opacity-70" />
+            </a>
             <div className="pt-4 space-y-2">
               {user ? (
                 <>
