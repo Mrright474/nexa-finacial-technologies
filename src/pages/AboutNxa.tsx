@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils';
 import {
   Coins, Gift, Landmark, ShieldCheck, Flame, Users, Vote,
   Rocket, Globe, Zap, Target, CheckCircle2, ArrowRight,
-  Lock, TrendingUp, Clock, BookOpen
+  Lock, TrendingUp, Clock, BookOpen, Gem
 } from 'lucide-react';
+import { LEGACY_VERSE_URL, LEGACY_VERSE_LABEL, LEGACY_VERSE_ARIA } from '@/config/externalLinks';
 import { BurnCounter } from '@/components/nxa/BurnCounter';
 import { BurnHistoryTimeline } from '@/components/nxa/BurnHistoryTimeline';
 import { BurnLeaderboard } from '@/components/nxa/BurnLeaderboard';
