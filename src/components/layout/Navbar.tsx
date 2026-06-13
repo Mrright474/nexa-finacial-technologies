@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Wallet, CreditCard, ArrowLeftRight, ArrowDownUp, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, Landmark, Bell, Gift } from 'lucide-react';
+import { Menu, X, Wallet, CreditCard, ArrowLeftRight, ArrowDownUp, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, Landmark, Bell, Gift, Gem, ExternalLink } from 'lucide-react';
+import { LEGACY_VERSE_URL, LEGACY_VERSE_LABEL, LEGACY_VERSE_ARIA } from '@/config/externalLinks';
 import { useAuth } from '@/hooks/useAuth';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
@@ -219,6 +220,18 @@ export function Navbar() {
                 )}
               </div>
 
+              <a
+                href={LEGACY_VERSE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={LEGACY_VERSE_ARIA}
+                className="hidden md:block"
+              >
+                <Button variant="ghost" size="sm" className="gap-2">
+                  <Gem className="w-4 h-4" /> {LEGACY_VERSE_LABEL}
+                </Button>
+              </a>
+
               {isAdmin && (
                 <Link to="/admin" className="hidden sm:block">
                   <Button variant="ghost" size="sm" className="gap-2">
@@ -273,6 +286,17 @@ export function Navbar() {
                   </Button>
                 </Link>
               ))}
+              <a
+                href={LEGACY_VERSE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={LEGACY_VERSE_ARIA}
+                onClick={() => setIsOpen(false)}
+              >
+                <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+                  <Gem className="w-4 h-4" /> {LEGACY_VERSE_LABEL}
+                </Button>
+              </a>
               {isAdmin && (
                 <Link to="/admin" onClick={() => setIsOpen(false)}>
                   <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
@@ -326,6 +350,16 @@ export function Navbar() {
                 </a>
               )
             )}
+            <a
+              href={LEGACY_VERSE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={LEGACY_VERSE_ARIA}
+              className="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors text-sm font-semibold"
+            >
+              <Gem className="w-4 h-4" /> {LEGACY_VERSE_LABEL}
+              <ExternalLink className="w-3 h-3 opacity-70" />
+            </a>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
@@ -389,6 +423,17 @@ export function Navbar() {
                 </a>
               )
             )}
+            <a
+              href={LEGACY_VERSE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={LEGACY_VERSE_ARIA}
+              onClick={() => setIsOpen(false)}
+              className="flex items-center gap-2 text-primary hover:text-primary/80 transition-colors text-sm font-semibold py-2"
+            >
+              <Gem className="w-4 h-4" /> {LEGACY_VERSE_LABEL}
+              <ExternalLink className="w-3 h-3 opacity-70" />
+            </a>
             <div className="pt-4 space-y-2">
               {user ? (
                 <>

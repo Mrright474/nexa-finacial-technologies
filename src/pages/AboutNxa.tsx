@@ -6,8 +6,9 @@ import { cn } from '@/lib/utils';
 import {
   Coins, Gift, Landmark, ShieldCheck, Flame, Users, Vote,
   Rocket, Globe, Zap, Target, CheckCircle2, ArrowRight,
-  Lock, TrendingUp, Clock, BookOpen
+  Lock, TrendingUp, Clock, BookOpen, Gem
 } from 'lucide-react';
+import { LEGACY_VERSE_URL, LEGACY_VERSE_LABEL, LEGACY_VERSE_ARIA } from '@/config/externalLinks';
 import { BurnCounter } from '@/components/nxa/BurnCounter';
 import { BurnHistoryTimeline } from '@/components/nxa/BurnHistoryTimeline';
 import { BurnLeaderboard } from '@/components/nxa/BurnLeaderboard';
@@ -123,6 +124,34 @@ export default function AboutNxa() {
                   <BookOpen className="w-5 h-5" /> API Docs
                 </Button>
               </Link>
+            </div>
+          </div>
+        </section>
+
+        {/* Legacy Verse Banner */}
+        <section className="py-6">
+          <div className="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div className="glass-card p-6 sm:p-8 flex flex-col sm:flex-row items-center justify-between gap-6 bg-gradient-to-r from-fuchsia-500/10 via-violet-500/10 to-purple-500/10 border-fuchsia-500/20">
+              <div className="flex items-center gap-4">
+                <div className="w-14 h-14 rounded-2xl bg-gradient-to-br from-fuchsia-500 to-violet-500 flex items-center justify-center shrink-0">
+                  <Gem className="w-7 h-7 text-white" />
+                </div>
+                <div>
+                  <h3 className="text-xl sm:text-2xl font-bold text-foreground">Use NXA to buy NFTs on Legacy Verse</h3>
+                  <p className="text-sm text-muted-foreground mt-1">Spend your NexaCoin in our Web3 marketplace — mint, collect, and trade exclusive NFTs.</p>
+                </div>
+              </div>
+              <a
+                href={LEGACY_VERSE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={LEGACY_VERSE_ARIA}
+                className="shrink-0"
+              >
+                <Button variant="gradient" size="lg" className="gap-2">
+                  <Gem className="w-5 h-5" /> {LEGACY_VERSE_LABEL}
+                </Button>
+              </a>
             </div>
           </div>
         </section>
