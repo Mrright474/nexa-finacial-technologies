@@ -350,6 +350,16 @@ export function Navbar() {
                 </a>
               )
             )}
+            <a
+              href={LEGACY_VERSE_URL}
+              target="_blank"
+              rel="noopener noreferrer"
+              aria-label={LEGACY_VERSE_ARIA}
+              className="inline-flex items-center gap-1.5 text-primary hover:text-primary/80 transition-colors text-sm font-semibold"
+            >
+              <Gem className="w-4 h-4" /> {LEGACY_VERSE_LABEL}
+              <ExternalLink className="w-3 h-3 opacity-70" />
+            </a>
           </div>
 
           <div className="hidden md:flex items-center gap-3">
