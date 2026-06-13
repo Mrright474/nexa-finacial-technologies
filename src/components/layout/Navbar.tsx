@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { Link, useLocation, useNavigate } from 'react-router-dom';
 import { Button } from '@/components/ui/button';
-import { Menu, X, Wallet, CreditCard, ArrowLeftRight, ArrowDownUp, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, Landmark, Bell, Gift } from 'lucide-react';
+import { Menu, X, Wallet, CreditCard, ArrowLeftRight, ArrowDownUp, TrendingUp, Settings, LogOut, User, Shield, BookOpen, Moon, Globe, BarChart3, Receipt, Landmark, Bell, Gift, Gem, ExternalLink } from 'lucide-react';
+import { LEGACY_VERSE_URL, LEGACY_VERSE_LABEL, LEGACY_VERSE_ARIA } from '@/config/externalLinks';
 import { useAuth } from '@/hooks/useAuth';
 import { useApp } from '@/context/AppContext';
 import { cn } from '@/lib/utils';
