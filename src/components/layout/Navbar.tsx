@@ -286,6 +286,17 @@ export function Navbar() {
                   </Button>
                 </Link>
               ))}
+              <a
+                href={LEGACY_VERSE_URL}
+                target="_blank"
+                rel="noopener noreferrer"
+                aria-label={LEGACY_VERSE_ARIA}
+                onClick={() => setIsOpen(false)}
+              >
+                <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
+                  <Gem className="w-4 h-4" /> {LEGACY_VERSE_LABEL}
+                </Button>
+              </a>
               {isAdmin && (
                 <Link to="/admin" onClick={() => setIsOpen(false)}>
                   <Button variant="ghost" size="sm" className="w-full justify-start gap-2">
